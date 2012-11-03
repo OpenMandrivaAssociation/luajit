@@ -1,0 +1,23 @@
+--- src/luaconf.h_orig	2012-07-07 15:57:13.024543831 +0100
++++ src/luaconf.h	2012-07-07 16:02:08.329557270 +0100
+@@ -22,6 +22,11 @@
+ #define LUA_CPATH_DEFAULT \
+   ".\\?.dll;" LUA_CDIR"?.dll;" LUA_CDIR"loadall.dll"
+ #else
++#ifdef MULTIARCH_PATH
++#define LUA_MULTIARCH_CPATH	MULTIARCH_PATH "lua/5.1/?.so;"
++#else
++#define LUA_MULTIARCH_CPATH
++#endif
+ #define LUA_ROOT	"/usr/local/"
+ #define LUA_LDIR	LUA_ROOT "share/lua/5.1/"
+ #define LUA_CDIR	LUA_ROOT "lib/lua/5.1/"
+@@ -38,7 +43,7 @@
+ #define LUA_PATH_DEFAULT \
+   "./?.lua;" LUA_JDIR"?.lua;" LUA_LDIR"?.lua;" LUA_LDIR"?/init.lua" LUA_XPATH
+ #define LUA_CPATH_DEFAULT \
+-  "./?.so;" LUA_CDIR"?.so;" LUA_XCPATH LUA_CDIR"loadall.so"
++  "./?.so;" LUA_CDIR"?.so;" LUA_MULTIARCH_CPATH LUA_XCPATH LUA_CDIR"loadall.so"
+ #endif
+ 
+ /* Environment variable names for path overrides and initialization code. */

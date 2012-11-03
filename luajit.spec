@@ -1,0 +1,108 @@
+%define major		2
+%define api		5.1
+%define libname		%mklibname %{name}-%{api} _%{major}
+%define libcommon	%mklibname %{name}-%{api}-common
+%define devname		%mklibname %{name}-%{api} -d
+
+%define tarname		LuaJIT
+%define beta		beta10
+
+Name:		luajit
+Version:	2.0.0
+Release:	0.%{beta}.1
+Summary:	Just-In-Time Compiler for the Lua programming language
+Group:		Development/Other
+License:	MIT
+Url:		http://luajit.org/luajit.html
+# http://luajit.org/download/LuaJIT-2.0.0-beta10.tar.gz
+Source:		http://%{name}.org/download/%{tarname}-%{version}-%{beta}.tar.gz
+Requires:	%{libcommon} = %{version}-%{release}
+Patch0:		luajit-2.0.0-beta10-mga-fix_multiarch_build-luaconf.h.patch
+
+%description
+LuaJIT has been successfully used as a scripting middle-ware in games,
+3D modelers, numerical simulations, trading platforms and many other
+specialty applications.
+It combines high flexibility with high performance and an unmatched low
+memory footprint: less than 125K for the VM plus less than 85K for the
+JIT compiler (on x86).
+LuaJIT has been in continuous development since 2005. It is widely considered
+to be one of the fastest dynamic language implementations.
+
+%prep
+%setup -q -n %{tarname}-%{version}-%{beta}
+%patch0 -p0 -b .luajit-2.0.0-beta10-mga-fix_multiarch_build-luaconf.h.patch
+
+%build
+%make amalg PREFIX=%{_usr} \
+	CCDEBUG=" -g " \
+	TARGET_LDFLAGS="%{ldflags}" \
+%ifarch x86_64
+	TARGET_CFLAGS="%{optflags} -DMULTIARCH_PATH='\"%{_libdir}/\"'"
+%else
+	TARGET_CFLAGS="%{optflags}" INSTALL_LIB="%{buildroot}%{_libdir}"
+%endif
+
+%install
+%makeinstall_std PREFIX=%{_usr} INSTALL_LIB=%{buildroot}%{_libdir}
+
+ln -sf %{_bindir}/%{name}-%{version}-%{beta} %{buildroot}%{_bindir}/%{name}
+ln -sf %{_libdir}/libluajit-%{api}.so.%{major}.0.0 %{buildroot}%{_libdir}/libluajit-%{api}.so
+
+%files
+%doc COPYRIGHT README
+%{_bindir}/%{name}-%{version}-%{beta}
+%{_bindir}/%{name}
+%{_mandir}/man1/luajit.1.xz
+
+%package -n %{libcommon}
+Summary:	Just-In-Time Compiler for the Lua programming language
+Group:		System/Libraries
+
+%description -n %{libcommon}
+LuaJIT has been successfully used as a scripting middle-ware in games,
+3D modelers, numerical simulations, trading platforms and many other
+specialty applications.
+It combines high flexibility with high performance and an unmatched low
+memory footprint: less than 125K for the VM plus less than 85K for the
+JIT compiler (on x86).
+LuaJIT has been in continuous development since 2005. It is widely considered
+to be one of the fastest dynamic language implementations.
+
+%files -n %{libcommon}
+%{_datadir}/%{name}-%{version}-%{beta}/jit/*.lua
+
+%package -n %{libname}
+Summary:	Just-In-Time Compiler for the Lua programming language
+Group:		System/Libraries
+Requires:	%{libcommon} = %{version}-%{release}
+
+%description -n %{libname}
+LuaJIT has been successfully used as a scripting middle-ware in games,
+3D modelers, numerical simulations, trading platforms and many other
+specialty applications.
+It combines high flexibility with high performance and an unmatched low
+memory footprint: less than 125K for the VM plus less than 85K for the
+JIT compiler (on x86).
+LuaJIT has been in continuous development since 2005. It is widely considered
+to be one of the fastest dynamic language implementations.
+
+%files -n %{libname}
+%{_libdir}/lib%{name}*.so.%{major}*
+
+%package -n %{devname}
+Summary:	Just-In-Time Compiler for the Lua programming language
+Group:		Development/Other
+Requires:	%{libname} = %{version}-%{release}
+Provides:	%{name}-devel = %{version}-%{release}
+Provides:	%{tarname}-devel = %{version}-%{release}
+
+%description -n %{devname}
+This package contains header files needed by developers.
+
+%files -n %{devname}
+%{_includedir}/luajit*/*.h*
+%{_libdir}/pkgconfig/%{name}.pc
+%{_libdir}/libluajit*.a
+%{_libdir}/libluajit-%{api}.so
+
