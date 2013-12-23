@@ -1,2 +1,3 @@
 sources:
-  "LuaJIT-2.0.0-beta10.tar.gz": 560d06621ea616bea1d67867faa235d608040396
+  LuaJIT-2.0.0-beta10.tar.gz: 560d06621ea616bea1d67867faa235d608040396
+  LuaJIT-2.0.2.tar.gz: d21426c4fc6ad8888255139039a014f7e28e7300

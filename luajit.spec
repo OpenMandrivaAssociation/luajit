@@ -5,19 +5,17 @@
 %define devname		%mklibname %{name}-%{api} -d
 
 %define tarname		LuaJIT
-%define beta		beta10
 
 Name:		luajit
-Version:	2.0.0
-Release:	0.%{beta}.1
+Version:	2.0.2
+Release:	1
 Summary:	Just-In-Time Compiler for the Lua programming language
 Group:		Development/Other
 License:	MIT
 Url:		http://luajit.org/luajit.html
 # http://luajit.org/download/LuaJIT-2.0.0-beta10.tar.gz
-Source:		http://%{name}.org/download/%{tarname}-%{version}-%{beta}.tar.gz
+Source0:	http://%{name}.org/download/%{tarname}-%{version}.tar.gz
 Requires:	%{libcommon} = %{version}-%{release}
-Patch0:		luajit-2.0.0-beta10-mga-fix_multiarch_build-luaconf.h.patch
 
 %description
 LuaJIT has been successfully used as a scripting middle-ware in games,
@@ -30,8 +28,7 @@ LuaJIT has been in continuous development since 2005. It is widely considered
 to be one of the fastest dynamic language implementations.
 
 %prep
-%setup -q -n %{tarname}-%{version}-%{beta}
-%patch0 -p0 -b .luajit-2.0.0-beta10-mga-fix_multiarch_build-luaconf.h.patch
+%setup -q -n %{tarname}-%{version}
 
 %build
 %make amalg PREFIX=%{_usr} \
@@ -46,12 +43,12 @@ to be one of the fastest dynamic language implementations.
 %install
 %makeinstall_std PREFIX=%{_usr} INSTALL_LIB=%{buildroot}%{_libdir}
 
-ln -sf %{_bindir}/%{name}-%{version}-%{beta} %{buildroot}%{_bindir}/%{name}
+ln -sf %{_bindir}/%{name}-%{version} %{buildroot}%{_bindir}/%{name}
 ln -sf %{_libdir}/libluajit-%{api}.so.%{major}.0.0 %{buildroot}%{_libdir}/libluajit-%{api}.so
 
 %files
 %doc COPYRIGHT README
-%{_bindir}/%{name}-%{version}-%{beta}
+%{_bindir}/%{name}-%{version}
 %{_bindir}/%{name}
 %{_mandir}/man1/luajit.1.xz
 
@@ -70,7 +67,7 @@ LuaJIT has been in continuous development since 2005. It is widely considered
 to be one of the fastest dynamic language implementations.
 
 %files -n %{libcommon}
-%{_datadir}/%{name}-%{version}-%{beta}/jit/*.lua
+%{_datadir}/%{name}-%{version}/jit/*.lua
 
 %package -n %{libname}
 Summary:	Just-In-Time Compiler for the Lua programming language
