@@ -7,7 +7,7 @@
 %define tarname		LuaJIT
 
 Name:		luajit
-Version:	2.0.2
+Version:	2.0.3
 Release:	1
 Summary:	Just-In-Time Compiler for the Lua programming language
 Group:		Development/Other
@@ -44,7 +44,7 @@ to be one of the fastest dynamic language implementations.
 %makeinstall_std PREFIX=%{_usr} INSTALL_LIB=%{buildroot}%{_libdir}
 
 ln -sf %{_bindir}/%{name}-%{version} %{buildroot}%{_bindir}/%{name}
-ln -sf %{_libdir}/libluajit-%{api}.so.%{major}.0.0 %{buildroot}%{_libdir}/libluajit-%{api}.so
+ln -sf %{_libdir}/libluajit-%{api}.so.%{version} %{buildroot}%{_libdir}/libluajit-%{api}.so
 
 %files
 %doc COPYRIGHT README
@@ -85,7 +85,8 @@ LuaJIT has been in continuous development since 2005. It is widely considered
 to be one of the fastest dynamic language implementations.
 
 %files -n %{libname}
-%{_libdir}/lib%{name}*.so.%{major}*
+%{_libdir}/lib%{name}*.so.%{major}
+%{_libdir}/lib%{name}*.so.%{version}
 
 %package -n %{devname}
 Summary:	Just-In-Time Compiler for the Lua programming language
