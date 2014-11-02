@@ -1,6 +1,6 @@
 %define major		2
 %define api		5.1
-%define libname		%mklibname %{name}-%{api} _%{major}
+%define libname		%mklibname %{name}-%{api} %{major}
 %define libcommon	%mklibname %{name}-%{api}-common
 %define devname		%mklibname %{name}-%{api} -d
 
@@ -8,7 +8,7 @@
 
 Name:		luajit
 Version:	2.0.3
-Release:	1
+Release:	2
 Summary:	Just-In-Time Compiler for the Lua programming language
 Group:		Development/Other
 License:	MIT
