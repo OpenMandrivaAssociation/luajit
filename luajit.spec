@@ -8,7 +8,7 @@
 
 Name:		luajit
 Version:	2.0.3
-Release:	2
+Release:	3
 Summary:	Just-In-Time Compiler for the Lua programming language
 Group:		Development/Other
 License:	MIT
