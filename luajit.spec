@@ -3,18 +3,19 @@
 %define libname %mklibname %{name}-%{api} %{major}
 %define libcommon %mklibname %{name}-%{api}-common
 %define devname %mklibname %{name}-%{api} -d
+%define beta beta2
 
 %define tarname LuaJIT
 
 Name:		luajit
-Version:	2.0.4
-Release:	2
+Version:	2.1.0
+Release:	0.beta.2
 Summary:	Just-In-Time Compiler for the Lua programming language
 Group:		Development/Other
 License:	MIT
 Url:		http://luajit.org/luajit.html
 # http://luajit.org/download/LuaJIT-2.0.0-beta10.tar.gz
-Source0:	http://%{name}.org/download/%{tarname}-%{version}.tar.gz
+Source0:	https://github.com/LuaJIT/LuaJIT/archive/v%{version}-beta2.tar.gz
 Requires:	%{libcommon} = %{version}-%{release}
 
 %description
@@ -67,7 +68,7 @@ Provides:	%{tarname}-devel = %{version}-%{release}
 This package contains header files needed by developers.
 
 %prep
-%setup -q -n %{tarname}-%{version}
+%setup -q -n %{tarname}-%{version}-beta2
 
 %build
 %make amalg PREFIX=%{_usr} \
@@ -82,17 +83,17 @@ This package contains header files needed by developers.
 %install
 %makeinstall_std PREFIX=%{_usr} INSTALL_LIB=%{buildroot}%{_libdir}
 
-ln -sf %{_bindir}/%{name}-%{version} %{buildroot}%{_bindir}/%{name}
+ln -sf %{_bindir}/%{name}-%{version}-%{beta} %{buildroot}%{_bindir}/%{name}
 ln -sf %{_libdir}/libluajit-%{api}.so.%{version} %{buildroot}%{_libdir}/libluajit-%{api}.so
 
 %files
 %doc COPYRIGHT README
-%{_bindir}/%{name}-%{version}
+%{_bindir}/%{name}-%{version}-%{beta}
 %{_bindir}/%{name}
 %{_mandir}/man1/luajit.1.xz
 
 %files -n %{libcommon}
-%{_datadir}/%{name}-%{version}/jit/*.lua
+%{_datadir}/%{name}-%{version}-%{beta}/jit/*.lua
 
 %files -n %{libname}
 %{_libdir}/lib%{name}*.so.%{major}
