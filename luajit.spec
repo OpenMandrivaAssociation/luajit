@@ -3,7 +3,7 @@
 %define libname %mklibname %{name}-%{api} %{major}
 %define libcommon %mklibname %{name}-%{api}-common
 %define devname %mklibname %{name}-%{api} -d
-%define beta beta2
+%define beta beta3
 
 %define tarname LuaJIT
 
@@ -15,7 +15,7 @@ Group:		Development/Other
 License:	MIT
 Url:		http://luajit.org/luajit.html
 # http://luajit.org/download/LuaJIT-2.0.0-beta10.tar.gz
-Source0:	https://github.com/LuaJIT/LuaJIT/archive/v%{version}-beta2.tar.gz
+Source0:	https://github.com/LuaJIT/LuaJIT/archive/v%{version}-beta3.tar.gz
 Requires:	%{libcommon} = %{version}-%{release}
 
 %description
@@ -68,7 +68,7 @@ Provides:	%{tarname}-devel = %{version}-%{release}
 This package contains header files needed by developers.
 
 %prep
-%setup -q -n %{tarname}-%{version}-beta2
+%setup -q -n %{tarname}-%{version}-beta3
 
 %build
 %make amalg PREFIX=%{_usr} \
