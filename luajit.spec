@@ -9,13 +9,14 @@
 
 Name:		luajit
 Version:	2.1.0
-Release:	0.beta.2
+Release:	0.%{beta}.1
 Summary:	Just-In-Time Compiler for the Lua programming language
 Group:		Development/Other
 License:	MIT
 Url:		http://luajit.org/luajit.html
 # http://luajit.org/download/LuaJIT-2.0.0-beta10.tar.gz
-Source0:	https://github.com/LuaJIT/LuaJIT/archive/v%{version}-beta3.tar.gz
+Source0:	https://github.com/LuaJIT/LuaJIT/archive/v%{version}-%{beta}.tar.gz
+Patch0:		luajit-2.1.0-no-Lusrlib.patch
 Requires:	%{libcommon} = %{version}-%{release}
 
 %description
@@ -68,20 +69,25 @@ Provides:	%{tarname}-devel = %{version}-%{release}
 This package contains header files needed by developers.
 
 %prep
-%setup -q -n %{tarname}-%{version}-beta3
+%autosetup -p1 -n %{tarname}-%{version}-beta3
+%if "%{_lib}" != "lib"
+sed -i -e 's,^multilib=lib,multilib=%{_lib},' etc/luajit.pc
+%endif
 
 %build
-%make amalg PREFIX=%{_usr} \
-	CCDEBUG=" -g " \
+%make_build amalg PREFIX=%{_usr} \
+	Q='' \
+	DEFAULT_CC=%{__cc} \
+	CCDEBUG="%{optflags}" \
 	TARGET_LDFLAGS="%{ldflags}" \
-%ifarch x86_64
-	TARGET_CFLAGS="%{optflags} -DMULTIARCH_PATH='\"%{_libdir}/\"'"
+%ifarch %{x86_64} %{aarch64}
+	TARGET_CFLAGS="%{optflags} -DMULTIARCH_PATH='\"%{_libdir}/\"'" INSTALL_LIB="%{buildroot}%{_libdir}"
 %else
 	TARGET_CFLAGS="%{optflags}" INSTALL_LIB="%{buildroot}%{_libdir}"
 %endif
 
 %install
-%makeinstall_std PREFIX=%{_usr} INSTALL_LIB=%{buildroot}%{_libdir}
+%make_install PREFIX=%{_usr} INSTALL_LIB=%{buildroot}%{_libdir}
 
 ln -sf %{_bindir}/%{name}-%{version}-%{beta} %{buildroot}%{_bindir}/%{name}
 ln -sf %{_libdir}/libluajit-%{api}.so.%{version} %{buildroot}%{_libdir}/libluajit-%{api}.so

@@ -1,0 +1,20 @@
+diff -up LuaJIT-2.1.0-beta3/etc/luajit.pc.omv~ LuaJIT-2.1.0-beta3/etc/luajit.pc
+--- LuaJIT-2.1.0-beta3/etc/luajit.pc.omv~	2019-07-28 16:04:28.611756510 +0200
++++ LuaJIT-2.1.0-beta3/etc/luajit.pc	2019-07-28 16:05:25.927283026 +0200
+@@ -5,7 +5,7 @@ relver=0
+ version=${majver}.${minver}.${relver}-beta3
+ abiver=5.1
+ 
+-prefix=/usr/local
++prefix=/usr
+ multilib=lib
+ exec_prefix=${prefix}
+ libdir=${exec_prefix}/${multilib}
+@@ -20,6 +20,6 @@ Description: Just-in-time compiler for L
+ URL: http://luajit.org
+ Version: ${version}
+ Requires:
+-Libs: -L${libdir} -l${libname}
++Libs: -l${libname}
+ Libs.private: -Wl,-E -lm -ldl
+ Cflags: -I${includedir}
