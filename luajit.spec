@@ -96,7 +96,7 @@ ln -sf %{_libdir}/libluajit-%{api}.so.%{version} %{buildroot}%{_libdir}/libluaji
 %doc COPYRIGHT README
 %{_bindir}/%{name}-%{version}-%{beta}
 %{_bindir}/%{name}
-%{_mandir}/man1/luajit.1.xz
+%{_mandir}/man1/luajit.1.*
 
 %files -n %{libcommon}
 %{_datadir}/%{name}-%{version}-%{beta}/jit/*.lua
