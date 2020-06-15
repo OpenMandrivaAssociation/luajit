@@ -7,9 +7,11 @@
 
 %define tarname LuaJIT
 
+%global optflags %{optflags} -O3
+
 Name:		luajit
 Version:	2.1.0
-Release:	0.%{beta}.1
+Release:	0.%{beta}.2
 Summary:	Just-In-Time Compiler for the Lua programming language
 Group:		Development/Other
 License:	MIT
@@ -80,6 +82,7 @@ sed -i -e 's,^multilib=lib,multilib=%{_lib},' etc/luajit.pc
 	DEFAULT_CC=%{__cc} \
 	CCDEBUG="%{optflags}" \
 	TARGET_LDFLAGS="%{ldflags}" \
+	XCFLAGS="-DLUAJIT_ENABLE_LUA52COMPAT" \
 %ifarch %{x86_64} %{aarch64}
 	TARGET_CFLAGS="%{optflags} -DMULTIARCH_PATH='\"%{_libdir}/\"'" INSTALL_LIB="%{buildroot}%{_libdir}"
 %else
