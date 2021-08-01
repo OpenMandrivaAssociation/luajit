@@ -1,8 +1,13 @@
 %define major 2
+%define mmajor %(echo %{version} |cut -d. -f1-2)
 %define api 5.1
 %define libname %mklibname %{name}-%{api} %{major}
 %define libcommon %mklibname %{name}-%{api}-common
 %define devname %mklibname %{name}-%{api} -d
+
+# Upstream is caught in a "release never" cycle, making progress
+# in git, but not making a release since beta 3 back in 2017.
+%define gitdate 20210801
 %define beta beta3
 
 %define tarname LuaJIT
@@ -11,13 +16,12 @@
 
 Name:		luajit
 Version:	2.1.0
-Release:	0.%{beta}.2
+Release:	0.%{beta}.%{gitdate}.1
 Summary:	Just-In-Time Compiler for the Lua programming language
 Group:		Development/Other
 License:	MIT
 Url:		http://luajit.org/luajit.html
-# http://luajit.org/download/LuaJIT-2.0.0-beta10.tar.gz
-Source0:	https://github.com/LuaJIT/LuaJIT/archive/v%{version}-%{beta}.tar.gz
+Source0:	https://github.com/LuaJIT/LuaJIT/archive/refs/heads/v%{mmajor}.tar.gz
 Patch0:		luajit-2.1.0-no-Lusrlib.patch
 Requires:	%{libcommon} = %{version}-%{release}
 
@@ -71,7 +75,7 @@ Provides:	%{tarname}-devel = %{version}-%{release}
 This package contains header files needed by developers.
 
 %prep
-%autosetup -p1 -n %{tarname}-%{version}-beta3
+%autosetup -p1 -n %{tarname}-%{mmajor}
 %if "%{_lib}" != "lib"
 sed -i -e 's,^multilib=lib,multilib=%{_lib},' etc/luajit.pc
 %endif
@@ -83,14 +87,15 @@ sed -i -e 's,^multilib=lib,multilib=%{_lib},' etc/luajit.pc
 	CCDEBUG="%{optflags}" \
 	TARGET_LDFLAGS="%{ldflags}" \
 	XCFLAGS="-DLUAJIT_ENABLE_LUA52COMPAT" \
-%ifarch %{x86_64} %{aarch64}
+	MULTILIB="%{_lib}" \
+%if "%{_lib}" != "lib"
 	TARGET_CFLAGS="%{optflags} -DMULTIARCH_PATH='\"%{_libdir}/\"'" INSTALL_LIB="%{buildroot}%{_libdir}"
 %else
 	TARGET_CFLAGS="%{optflags}" INSTALL_LIB="%{buildroot}%{_libdir}"
 %endif
 
 %install
-%make_install PREFIX=%{_usr} INSTALL_LIB=%{buildroot}%{_libdir}
+%make_install PREFIX=%{_usr} MULTILIB="%{_lib}" INSTALL_LIB=%{buildroot}%{_libdir}
 
 ln -sf %{_bindir}/%{name}-%{version}-%{beta} %{buildroot}%{_bindir}/%{name}
 ln -sf %{_libdir}/libluajit-%{api}.so.%{version} %{buildroot}%{_libdir}/libluajit-%{api}.so
