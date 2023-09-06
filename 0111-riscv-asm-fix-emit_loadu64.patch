@@ -1,0 +1,57 @@
+From 905cf964064ed0df8f1792545c4480244c1d4260 Mon Sep 17 00:00:00 2001
+From: gns <infiwang@pm.me>
+Date: Sun, 18 Jun 2023 21:26:35 +0800
+Subject: [PATCH 111/156] riscv(asm): fix emit_loadu64
+
+I'm a genius.
+
+Fix 5581491 "riscv(emit): optimize emit_loadu64"
+
+This is a WIP, archive only.
+---
+ src/lj_emit_riscv.h | 28 +++++++++++++---------------
+ 1 file changed, 13 insertions(+), 15 deletions(-)
+
+diff --git a/src/lj_emit_riscv.h b/src/lj_emit_riscv.h
+index c0b51aa1..0f873dd4 100644
+--- a/src/lj_emit_riscv.h
++++ b/src/lj_emit_riscv.h
+@@ -227,22 +227,20 @@ static void emit_loadu64(ASMState *as, Reg r, uint64_t u64)
+ {
+   if (checki32((int64_t)u64)) {
+     emit_loadk32(as, r, (int32_t)u64);
++  } else if (!(u64&0xffffffffffful)) {
++    emit_dsshamt(as, RISCVI_SLLI, r, r, 32);
++    emit_du(as, RISCVI_LUI, r, u64 >> 44);
++  } else if (!(u64&0xfffffffful)) {
++    emit_dsshamt(as, RISCVI_SLLI, r, r, 32);
++    emit_loadk32(as, r, (int32_t)(u64 >> 32));
+   } else {
+-    if (!(u64 & 0x00000fffffffffff)) {
+-      emit_dsshamt(as, RISCVI_SLLI, r, r, 44);
+-      emit_du(as, RISCVI_LUI, r, (u64 >> 44) & 0xfffff);
+-    } else if (!(u64 & 0xffffffff)) {
+-      emit_dsshamt(as, RISCVI_SLLI, r, r, 32);
+-      emit_loadk32(as, r, (u64 >> 32) & 0xffffffff);
+-    } else {
+-      emit_dsi(as, RISCVI_ADDI, r, r, u64 & 0x3ff);
+-      emit_dsshamt(as, RISCVI_SLLI, r, r, 10);
+-      emit_dsi(as, RISCVI_ADDI, r, r, (u64 >> 10) & 0x7ff);
+-      emit_dsshamt(as, RISCVI_SLLI, r, r, 11);
+-      emit_dsi(as, RISCVI_ADDI, r, r, (u64 >> 21) & 0x7ff);
+-      emit_dsshamt(as, RISCVI_SLLI, r, r, 11);
+-      emit_loadk32(as, r, (u64 >> 32) & 0xffffffff);
+-    }
++    emit_dsi(as, RISCVI_ADDI, r, r, u64 & 0x3ff);
++    emit_dsshamt(as, RISCVI_SLLI, r, r, 10);
++    emit_dsi(as, RISCVI_ADDI, r, r, (u64 >> 10) & 0x7ff);
++    emit_dsshamt(as, RISCVI_SLLI, r, r, 11);
++    emit_dsi(as, RISCVI_ADDI, r, r, (u64 >> 21) & 0x7ff);
++    emit_dsshamt(as, RISCVI_SLLI, r, r, 11);
++    emit_loadk32(as, r, (int32_t)(u64 >> 32));
+   }
+ }
+ 
+-- 
+2.42.0
+

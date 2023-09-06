@@ -1,0 +1,41 @@
+From 11944bf29c9e82f284e05016ad1b02964fb1eb0d Mon Sep 17 00:00:00 2001
+From: gns <infiwang@pm.me>
+Date: Sat, 8 Jul 2023 23:39:29 +0800
+Subject: [PATCH 146/156] riscv(asm): fix asm_setup_call_slots with variable
+ argument function
+
+Fix d95b467 "riscv(asm): asm_setup_call_slots workaround"
+---
+ src/lj_asm_riscv64.h | 16 ++++++++++------
+ 1 file changed, 10 insertions(+), 6 deletions(-)
+
+diff --git a/src/lj_asm_riscv64.h b/src/lj_asm_riscv64.h
+index c7b55382..c652b5b6 100644
+--- a/src/lj_asm_riscv64.h
++++ b/src/lj_asm_riscv64.h
+@@ -1857,12 +1857,16 @@ static Reg asm_setup_call_slots(ASMState *as, IRIns *ir, const CCallInfo *ci)
+   int nslots = 0, ngpr = REGARG_NUMGPR, nfpr = REGARG_NUMFPR;
+   asm_collectargs(as, ir, ci, args);
+   for (i = 0; i < nargs; i++) {
+-  //   if (args[i] && irt_isfp(IR(args[i])->t)) {
+-  //     if (nfpr > 0) nfpr--; else if (ngpr > 0) ngpr--;
+-  //     else nslots += 2;
+-  //   } else {
+-      if (ngpr > 0) ngpr--; else nslots += 2;
+-    // }
++    if (args[i] && irt_isfp(IR(args[i])->t)) {
++      if (nfpr > 0) {
++        nfpr--; if(ci->flags & CCI_VARARG) ngpr--;
++      } else if (!(ci->flags & CCI_VARARG) && ngpr > 0) ngpr--;
++      else nslots += 2;
++    } else {
++      if (ngpr > 0) {
++        ngpr--; if(ci->flags & CCI_VARARG) nfpr--;
++      } else nslots += 2;
++    }
+   }
+   if (nslots > as->evenspill)  /* Leave room for args in stack slots. */
+     as->evenspill = nslots;
+-- 
+2.42.0
+

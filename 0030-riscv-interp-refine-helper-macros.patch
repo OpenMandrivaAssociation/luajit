@@ -1,0 +1,75 @@
+From d8c6de74e58326dcb9f4b9b142e7f1ad393b6cdf Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Mon, 13 Feb 2023 21:25:06 +0800
+Subject: [PATCH 030/156] riscv(interp): refine helper macros
+
+- We use LUI in helper macros to load i20. Unfortunately, LUI only
+  accepts unsigned immediates, which cause DynASM to issue a warning
+  in some cases. So, mask these immediates.
+  Keep in mind that LI[(LUI+)ADDI] should be a long-term fix.
+- ROT macros had a register footprint up to 4 previously.
+  Unfortunately, we must use up another saved register to keep DISPATCH
+  in register, therefore we must slightly compress ROTI.
+  Note that ROTI is not in use anywhere.
+
+This is a WIP, archive only.
+---
+ src/vm_riscv64.dasc | 24 ++++++++++++------------
+ 1 file changed, 12 insertions(+), 12 deletions(-)
+
+diff --git a/src/vm_riscv64.dasc b/src/vm_riscv64.dasc
+index 1868e939..37ea5bcf 100644
+--- a/src/vm_riscv64.dasc
++++ b/src/vm_riscv64.dasc
+@@ -252,12 +252,12 @@
+ |.endmacro
+ |
+ |.macro lxi, a, b
+-|  lui a, b
++|  lui a, (b)&0xfffff
+ |  srai a, a, 12
+ |.endmacro
+ |
+ |.macro lzi, a, b
+-|  lui a, b
++|  lui a, (b)&0xfffff
+ |  srli a, a, 12
+ |.endmacro
+ |
+@@ -320,23 +320,23 @@
+ |.endmacro
+ |
+ |.macro roli, a, b, c
+-|  li x28, c
+-|  rol a, b, x28
++|  li x30, (c)&0xfffff
++|  rol a, b, x30
+ |.endmacro
+ |
+ |.macro rori, a, b, c
+-|  li x28, c
+-|  ror a, b, x28
++|  li x30, (c)&0xfffff
++|  ror a, b, x30
+ |.endmacro
+ |
+-|.macro rolwi, a, b, c
+-|  li x28, c
+-|  rolw a, b, x28
++|.macro roliw, a, b, c
++|  li x30, (c)&0xfffff
++|  rolw a, b, x30
+ |.endmacro
+ |
+-|.macro rorwi, a, b, c
+-|  li x28, c
+-|  rorw a, b, x28
++|.macro roriw, a, b, c
++|  li x30, (c)&0xfffff
++|  rorw a, b, x30
+ |.endmacro
+ |
+ |.macro bfextri, a, b, c, d
+-- 
+2.42.0
+

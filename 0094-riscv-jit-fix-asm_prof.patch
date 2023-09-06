@@ -1,0 +1,35 @@
+From 56c985b0b066fdce85a2acb509bad03d109b8365 Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Thu, 4 May 2023 11:18:09 +0800
+Subject: [PATCH 094/156] riscv(jit): fix asm_prof
+
+This is a WIP, archive only.
+---
+ src/lj_asm_riscv64.h | 11 ++++++-----
+ 1 file changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/src/lj_asm_riscv64.h b/src/lj_asm_riscv64.h
+index e4ae8e29..a5e71d52 100644
+--- a/src/lj_asm_riscv64.h
++++ b/src/lj_asm_riscv64.h
+@@ -1648,11 +1648,12 @@ static void asm_hiop(ASMState *as, IRIns *ir)
+ static void asm_prof(ASMState *as, IRIns *ir)
+ {
+   UNUSED(ir);
+-  asm_guard(as, RISCVI_BNE, RID_TMP, RID_ZERO);
+-  emit_opk(as, RISCVI_ANDI, RID_TMP, RID_TMP, HOOK_PROFILE,
+-           RSET_GPR);
+-  emit_lsglptr(as, RISCVI_LBU, RID_TMP,
+-               (int32_t)offsetof(global_State, hookmask));
++  Reg tmp = ra_scratch(as, RSET_GPR);
++  asm_guard(as, RISCVI_BNE, tmp, RID_ZERO);
++  emit_opk(as, RISCVI_ANDI, tmp, tmp, HOOK_PROFILE,
++           rset_exclude(RSET_GPR, tmp));
++  emit_lsglptr(as, RISCVI_LBU, tmp,
++         (int32_t)offsetof(global_State, hookmask));
+ }
+ 
+ /* -- Stack handling ------------------------------------------------------ */
+-- 
+2.42.0
+

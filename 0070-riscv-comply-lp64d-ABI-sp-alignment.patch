@@ -1,0 +1,67 @@
+From d60e93bacea00ac9c7e47d7b6b03e89e969c9a38 Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Tue, 21 Mar 2023 13:33:42 +0800
+Subject: [PATCH 070/156] riscv: comply lp64d ABI sp alignment
+
+"the stack pointer shall be aligned to a 128-bit boundary upon procedure entry"
+
+This is a WIP, archive only.
+---
+ src/lj_frame.h      | 12 ++++++------
+ src/vm_riscv64.dasc | 13 +++++++------
+ 2 files changed, 13 insertions(+), 12 deletions(-)
+
+diff --git a/src/lj_frame.h b/src/lj_frame.h
+index dc6aac02..dace63d7 100644
+--- a/src/lj_frame.h
++++ b/src/lj_frame.h
+@@ -265,13 +265,13 @@ enum { LJ_CONT_TAILCALL, LJ_CONT_FFI_CALLBACK };  /* Special continuations. */
+ #define CFRAME_OFS_MULTRES	0
+ #define CFRAME_SHIFT_MULTRES	3
+ #elif LJ_TARGET_RISCV64
+-#define CFRAME_OFS_ERRF		244
+-#define CFRAME_OFS_NRES		240
+-#define CFRAME_OFS_PREV		232
+-#define CFRAME_OFS_L		224
+-#define CFRAME_OFS_PC		216
++#define CFRAME_OFS_ERRF		252
++#define CFRAME_OFS_NRES		248
++#define CFRAME_OFS_PREV		240
++#define CFRAME_OFS_L		232
++#define CFRAME_OFS_PC		224
+ #define CFRAME_OFS_MULTRES	0
+-#define CFRAME_SIZE		248
++#define CFRAME_SIZE		256
+ #define CFRAME_SHIFT_MULTRES	3
+ #else
+ #error "Missing CFRAME_* definitions for this architecture"
+diff --git a/src/vm_riscv64.dasc b/src/vm_riscv64.dasc
+index a8ec93b9..58ce0cf3 100644
+--- a/src/vm_riscv64.dasc
++++ b/src/vm_riscv64.dasc
+@@ -84,15 +84,16 @@
+ |// Stack layout while in interpreter. Must match with lj_frame.h.
+ |// RISC-V 64 lp64d.
+ |
+-|.define CFRAME_SPACE,	248	// Delta for sp.
++|.define CFRAME_SPACE,	256	// Delta for sp.
+ |
+ |//----- 16 byte aligned, <-- sp entering interpreter
+-|.define SAVE_ERRF,	244	// 32 bit values.
+-|.define SAVE_NRES,	240
+-|.define SAVE_CFRAME,	232	// 64 bit values.
+-|.define SAVE_L,	224
+-|.define SAVE_PC,	216
++|.define SAVE_ERRF,	252	// 32 bit values.
++|.define SAVE_NRES,	248
++|.define SAVE_CFRAME,	240	// 64 bit values.
++|.define SAVE_L,	232
++|.define SAVE_PC,	224
+ |//----- 16 byte aligned
++|// Padding		216
+ |.define SAVE_GPR_,	112	// .. 112+13*8: 64 bit GPR saves.
+ |.define SAVE_FPR_,	16	// .. 16+12*8: 64 bit FPR saves.
+ |
+-- 
+2.42.0
+

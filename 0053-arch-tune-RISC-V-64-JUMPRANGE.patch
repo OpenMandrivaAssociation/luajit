@@ -1,0 +1,29 @@
+From 68fcd2eacb4f133d322cd9ea9439a6e48d79799b Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Wed, 22 Feb 2023 21:37:14 +0800
+Subject: [PATCH 053/156] arch: tune RISC-V 64 JUMPRANGE
+
+AUIPC+JALR +-2^31 = +-2GB, leave 1 bit to avoid AUIPC corner case.
+
+This is a WIP, archive only.
+---
+ src/lj_arch.h | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/lj_arch.h b/src/lj_arch.h
+index 5be43cda..d6712ec0 100644
+--- a/src/lj_arch.h
++++ b/src/lj_arch.h
+@@ -453,7 +453,8 @@
+ #define LJ_TARGET_GC64		1
+ #define LJ_TARGET_EHRETREG	0
+ #define LJ_TARGET_EHRAREG	1
+-#define LJ_TARGET_JUMPRANGE	20	/* +-2^20 = +-1MB */ /* copy poor man's GOT from MIPS? */
++#define LJ_TARGET_JUMPRANGE	30	\
++/* JAL +-2^20 = +-1MB, AUIPC+JALR +-2^31 = +-2GB, leave 1 bit to avoid AUIPC corner case */
+ #define LJ_TARGET_MASKSHIFT	1
+ #define LJ_TARGET_MASKROT	1
+ #define LJ_TARGET_UNIFYROT	2	/* Want only IR_BROR. */
+-- 
+2.42.0
+

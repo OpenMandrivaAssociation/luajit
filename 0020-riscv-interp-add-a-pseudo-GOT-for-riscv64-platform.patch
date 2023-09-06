@@ -1,0 +1,184 @@
+From c32c2198d4c7cdd84bdfc22bb4e621cb358d18d8 Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Thu, 15 Dec 2022 01:54:11 +0800
+Subject: [PATCH 020/156] riscv(interp): add a pseudo-GOT for riscv64 platform
+
+To allow dynamic linking to libc with PIC enabled, our own helper GOT
+is required.
+
+This is a WIP, archive only.
+---
+ src/lj_dispatch.c   | 11 ++++++++++-
+ src/lj_dispatch.h   | 18 +++++++++++++++++-
+ src/vm_riscv64.dasc | 30 ++++++++++++++++++++++--------
+ 3 files changed, 49 insertions(+), 10 deletions(-)
+
+diff --git a/src/lj_dispatch.c b/src/lj_dispatch.c
+index ded382aa..32688a0f 100644
+--- a/src/lj_dispatch.c
++++ b/src/lj_dispatch.c
+@@ -56,6 +56,15 @@ static const ASMFunction dispatch_got[] = {
+ #undef GOTFUNC
+ #endif
+ 
++#if LJ_TARGET_RISCV64
++#include <math.h>
++#define GOTFUNC(name)	(ASMFunction)name,
++static const ASMFunction dispatch_got[] = {
++  GOTDEF(GOTFUNC)
++};
++#undef GOTFUNC
++#endif
++
+ /* Initialize instruction dispatch table and hot counters. */
+ void lj_dispatch_init(GG_State *GG)
+ {
+@@ -76,7 +85,7 @@ void lj_dispatch_init(GG_State *GG)
+   GG->g.bc_cfunc_ext = GG->g.bc_cfunc_int = BCINS_AD(BC_FUNCC, LUA_MINSTACK, 0);
+   for (i = 0; i < GG_NUM_ASMFF; i++)
+     GG->bcff[i] = BCINS_AD(BC__MAX+i, 0, 0);
+-#if LJ_TARGET_MIPS
++#if LJ_TARGET_MIPS || LJ_TARGET_RISCV64
+   memcpy(GG->got, dispatch_got, LJ_GOT__MAX*sizeof(ASMFunction *));
+ #endif
+ }
+diff --git a/src/lj_dispatch.h b/src/lj_dispatch.h
+index 52762eea..c794f24a 100644
+--- a/src/lj_dispatch.h
++++ b/src/lj_dispatch.h
+@@ -66,6 +66,22 @@ GOTDEF(GOTENUM)
+ };
+ #endif
+ 
++#if LJ_TARGET_RISCV64
++/* Need our own global offset table to wrap RISC-V PIC extern calls */
++
++#define GOTDEF(_) \
++  _(floor) _(ceil) _(trunc) _(log) _(log10) _(exp) _(sin) _(cos) _(tan) \
++  _(asin) _(acos) _(atan) _(sinh) _(cosh) _(tanh) _(frexp) _(modf) _(atan2) \
++  _(pow) _(fmod) _(ldexp)
++
++enum {
++#define GOTENUM(name) LJ_GOT_##name,
++GOTDEF(GOTENUM)
++#undef GOTENUM
++  LJ_GOT__MAX
++};
++#endif
++
+ /* Type of hot counter. Must match the code in the assembler VM. */
+ /* 16 bits are sufficient. Only 0.0015% overhead with maximum slot penalty. */
+ typedef uint16_t HotCount;
+@@ -93,7 +109,7 @@ typedef struct GG_State {
+   /* Make g reachable via K12 encoded DISPATCH-relative addressing. */
+   uint8_t align1[(16-sizeof(global_State))&15];
+ #endif
+-#if LJ_TARGET_MIPS
++#if LJ_TARGET_MIPS || LJ_TARGET_RISCV64
+   ASMFunction got[LJ_GOT__MAX];		/* Global offset table. */
+ #endif
+ #if LJ_HASJIT
+diff --git a/src/vm_riscv64.dasc b/src/vm_riscv64.dasc
+index fc900046..706cc67d 100644
+--- a/src/vm_riscv64.dasc
++++ b/src/vm_riscv64.dasc
+@@ -51,7 +51,7 @@
+ |.define TMP4,		x27
+ |
+ |// RISC-V lp64d calling convention.
+-// |.define CFUNCADDR,	x5
++|.define CFUNCADDR,	x5
+ |.define CARG1,		x10
+ |.define CARG2,		x11
+ |.define CARG3,		x12
+@@ -523,6 +523,13 @@
+ |
+ #define PC2PROTO(field)  ((int)offsetof(GCproto, field)-(int)sizeof(GCproto))
+ |
++|.macro load_got, func
++|  ld CFUNCADDR, DISPATCH_GOT(func)(DISPATCH)
++|.endmacro
++|// JAL should be enough for internal jumps.
++|// .macro call_intern, func; jalr CFUNCADDR; .endmacro
++|.macro call_extern; jalr CFUNCADDR; .endmacro
++|.macro jmp_extern; jr CFUNCADDR; .endmacro
+ |
+ |// Set current VM state. Uses TMP0.
+ |.macro li_vmstate, st; liw TMP0, ~LJ_VMST_..st; .endmacro
+@@ -1746,13 +1753,15 @@ static void build_subroutines(BuildCtx *ctx)
+   |
+   |.macro math_extern, func
+   |  .ffunc_n math_ .. func
+-  |  jal extern func
++  |  load_got func
++  |  call_extern
+   |  j ->fff_resn
+   |.endmacro
+   |
+   |.macro math_extern2, func
+   |  .ffunc_nn math_ .. func
+-  |  jal extern func
++  |  load_got func
++  |  call_extern
+   |  j ->fff_resn
+   |.endmacro
+   |
+@@ -1768,8 +1777,9 @@ static void build_subroutines(BuildCtx *ctx)
+   |   ld CARG1, 0(BASE)
+   |   fld FARG1, 0(BASE)
+   |  bxne NARGS8:RC, TMP1, ->fff_fallback		// Need exactly 1 argument.
++  |  load_got log
+   |  checknum CARG1, ->fff_fallback
+-  |  jal extern log
++  |  call_extern
+   |  j ->fff_resn
+   |
+   |  math_extern log10
+@@ -1790,15 +1800,17 @@ static void build_subroutines(BuildCtx *ctx)
+   |.ffunc_2 math_ldexp
+   |  checknum CARG1, ->fff_fallback
+   |  checkint CARG2, ->fff_fallback
++  |  load_got ldexp			// (double x, int exp)
+   |   fld FARG1, 0(BASE)
+   |   lw CARG1, 8(BASE)
+-  |  jal extern ldexp			// (double x, int exp)
++  |  call_extern
+   |  j ->fff_resn
+   |
+   |.ffunc_n math_frexp
++  |  load_got frexp
+   |   ld PC, FRAME_PC(BASE)
+   |  addxi CARG1, DISPATCH, DISPATCH_GL(tmptv)
+-  |  jal extern frexp
++  |  call_extern
+   |    lxw TMP1, DISPATCH, DISPATCH_GL(tmptv)
+   |   fcvt.d.w FARG2, TMP1
+   |  fsd FRET1, -16(BASE)
+@@ -1807,9 +1819,10 @@ static void build_subroutines(BuildCtx *ctx)
+   |  j ->fff_res
+   |
+   |.ffunc_n math_modf
++  |  load_got modf
+   |   addi CARG1, BASE, -16
+   |   ld PC, FRAME_PC(BASE)
+-  |  jal extern modf
++  |  call_extern
+   |  fsd FRET1, -8(BASE)
+   |   li RD, (2+1)*8
+   |  j ->fff_res
+@@ -2845,10 +2858,11 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |   sltiu TMP1, TMP1, LJ_TISNUM
+     |  and TMP0, TMP0, TMP1
+     |   add RA, BASE, RA
++    |  load_got pow
+     |  bxeqz TMP0, ->vmeta_arith
+     |  fld FARG1, 0(RB)
+     |  fld FARG2, 0(RC)
+-    |  jal extern pow
++    |  call_extern
+     |  ins_next1
+     |  fsd FRET1, 0(RA)
+     |  ins_next2
+-- 
+2.42.0
+

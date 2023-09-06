@@ -1,0 +1,30 @@
+From 70188e5d5f16138bb87e9d09805fb39f41d575f1 Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Sat, 4 Feb 2023 22:41:46 +0800
+Subject: [PATCH 021/156] riscv(interp): comment cleanup
+
+Interpreter porting is based upon LoongArch port, cleanup comment.
+For reason that will become obvious, we should refactor referring to
+arm and arm64 though.
+
+This is a WIP, archive only.
+---
+ src/vm_riscv64.dasc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/vm_riscv64.dasc b/src/vm_riscv64.dasc
+index 706cc67d..af5a966b 100644
+--- a/src/vm_riscv64.dasc
++++ b/src/vm_riscv64.dasc
+@@ -411,7 +411,7 @@
+ |
+ |//-----------------------------------------------------------------------
+ |
+-|// Endian-specific defines. LoongArch is little endian.
++|// Endian-specific defines. RISC-V only has little endian ABI for now.
+ |.define OFS_RD,	2
+ |.define OFS_RA,	1
+ |.define OFS_OP,	0
+-- 
+2.42.0
+

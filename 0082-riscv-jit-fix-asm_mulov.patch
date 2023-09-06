@@ -1,0 +1,32 @@
+From f9e6cd0a251b4955ff2ffa06ee2768bf119726b3 Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Sun, 16 Apr 2023 11:47:40 +0800
+Subject: [PATCH 082/156] riscv(jit): fix asm_mulov
+
+dest could be the same register as left/right, thus calculate temporaries first.
+
+This is a WIP, archive only.
+---
+ src/lj_asm_riscv64.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/lj_asm_riscv64.h b/src/lj_asm_riscv64.h
+index b9e24d58..a5da2c7f 100644
+--- a/src/lj_asm_riscv64.h
++++ b/src/lj_asm_riscv64.h
+@@ -1367,10 +1367,10 @@ static void asm_mulov(ASMState *as, IRIns *ir)
+   tmp2 = ra_scratch(as, RSET_GPR &  ~(RID2RSET(left)|RID2RSET(right)
+                                      |RID2RSET(dest)|RID2RSET(tmp1)));
+   asm_guard(as, RISCVI_BNE, tmp1, tmp2);
+-  emit_dsshamt(as, RISCVI_SRAI, tmp1, tmp1, 32);
+   emit_dsshamt(as, RISCVI_SRAIW, tmp2, dest, 31);
+-  emit_ds1s2(as, RISCVI_MUL, tmp1, left, right);	// tmp: [63:32]
++  emit_dsshamt(as, RISCVI_SRAI, tmp1, tmp1, 32);	// tmp1: [63:32]
+   emit_ds1s2(as, RISCVI_MULW, dest, left, right);	// dest: [31:0]+signextend
++  emit_ds1s2(as, RISCVI_MUL, tmp1, left, right);	// tmp1: [63:0]?
+ }
+ 
+ static void asm_bnot(ASMState *as, IRIns *ir)
+-- 
+2.42.0
+

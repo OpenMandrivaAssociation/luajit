@@ -1,0 +1,23 @@
+From 975417be93a02d237a1b6267f7d6a9707e45e14b Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Thu, 30 Mar 2023 01:27:56 +0800
+Subject: [PATCH 075/156] riscv(vm): stop generate RVC and relax in lj_vm
+
+This is a WIP, archive only.
+---
+ src/host/buildvm_asm.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff -up LuaJIT-2.1/src/host/buildvm_asm.c.75~ LuaJIT-2.1/src/host/buildvm_asm.c
+--- LuaJIT-2.1/src/host/buildvm_asm.c.75~	2023-09-06 19:31:31.744697390 +0100
++++ LuaJIT-2.1/src/host/buildvm_asm.c	2023-09-06 19:32:14.554753122 +0100
+@@ -258,6 +258,9 @@ void emit_asm(BuildCtx *ctx)
+ #if LJ_TARGET_MIPS
+   fprintf(ctx->fp, "\t.set nomips16\n\t.abicalls\n\t.set noreorder\n\t.set nomacro\n");
+ #endif
++#if LJ_TARGET_RISCV64
++  fprintf(ctx->fp, ".option arch, -c\n.option norelax\n");
++#endif
+   emit_asm_align(ctx, 4);
+ 
+ #if LJ_TARGET_PS3

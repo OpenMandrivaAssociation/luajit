@@ -1,0 +1,31 @@
+From a51de7abe7296127c131a60b3fc42616df249275 Mon Sep 17 00:00:00 2001
+From: gns <infiwang@pm.me>
+Date: Fri, 23 Jun 2023 21:27:24 +0800
+Subject: [PATCH 128/156] riscv(emit): more sanitization
+
+---
+ src/lj_emit_riscv.h | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/lj_emit_riscv.h b/src/lj_emit_riscv.h
+index 9548e4e4..9583a1cc 100644
+--- a/src/lj_emit_riscv.h
++++ b/src/lj_emit_riscv.h
+@@ -381,11 +381,11 @@ static void emit_movrr(ASMState *as, IRIns *ir, Reg dst, Reg src)
+ static void emit_opk(ASMState *as, RISCVIns riscvi, Reg dest, Reg src,
+          intptr_t i, RegSet allow)
+ {
+-  if (((riscvi == RISCVI_ADDI) && checki12(i)) ||
++  if (((riscvi == RISCVI_ADDI) && checki12((uintptr_t)i)) ||
+       (((riscvi == RISCVI_XORI) || (riscvi == RISCVI_ORI)) &&
+-       (i >= 0 ? checki12(i << 1) : checki12(i))) ||
++       (i >= 0 ? checki12((uintptr_t)i << 1) : checki12((uintptr_t)i))) ||
+       ((riscvi == RISCVI_ANDI) &&
+-       (i >= 0 ? checki12(i) : checki12(i << 1)))) {
++       (i >= 0 ? checki12((uintptr_t)i) : checki12((uintptr_t)i << 1)))) {
+     emit_dsi(as, riscvi, dest, src, i);
+   } else {
+     switch (riscvi) {
+-- 
+2.42.0
+

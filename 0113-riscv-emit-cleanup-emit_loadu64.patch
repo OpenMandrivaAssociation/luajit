@@ -1,0 +1,29 @@
+From ca74e0f999beedc3465e8c3ba01a0394600e97f8 Mon Sep 17 00:00:00 2001
+From: gns <infiwang@pm.me>
+Date: Mon, 19 Jun 2023 22:19:50 +0800
+Subject: [PATCH 113/156] riscv(emit): cleanup emit_loadu64
+
+Redundant as the statement after for loop does the same thing.
+
+This is a WIP, archive only.
+---
+ src/lj_emit_riscv.h | 3 ---
+ 1 file changed, 3 deletions(-)
+
+diff --git a/src/lj_emit_riscv.h b/src/lj_emit_riscv.h
+index 6c44189a..4b0f5879 100644
+--- a/src/lj_emit_riscv.h
++++ b/src/lj_emit_riscv.h
+@@ -238,9 +238,6 @@ static void emit_loadu64(ASMState *as, Reg r, uint64_t u64)
+         uint64_t msk = ((1ul << (bit+1))-1)^((1ul << (((bit-inc) >= 0) ? (bit-inc) : 0))-1);
+         uint32_t payload = (lo32 & msk) >> (((bit-inc) >= 0) ? (bit-inc) : 0);
+         emit_dsi(as, RISCVI_ADDI, r, r, payload);
+-      } else if (bit == 31) {
+-        emit_dsshamt(as, RISCVI_SLLI, r, r, shamt+1);
+-        shamt = 0;
+       } else shamt++;
+     }
+     if (shamt) emit_dsshamt(as, RISCVI_SLLI, r, r, shamt);
+-- 
+2.42.0
+

@@ -1,0 +1,26 @@
+From 75073d7aed390080ce002ee45873095df10916bf Mon Sep 17 00:00:00 2001
+From: gns <infiwang@pm.me>
+Date: Tue, 11 Jul 2023 20:02:20 +0800
+Subject: [PATCH 147/156] riscv(asm): fix asm_hrefk bigofs check
+
+LuaJIT/LuaJIT#1026
+---
+ src/lj_asm_riscv64.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/lj_asm_riscv64.h b/src/lj_asm_riscv64.h
+index c652b5b6..988642a8 100644
+--- a/src/lj_asm_riscv64.h
++++ b/src/lj_asm_riscv64.h
+@@ -770,7 +770,7 @@ static void asm_hrefk(ASMState *as, IRIns *ir)
+   IRIns *irkey = IR(kslot->op1);
+   int32_t ofs = (int32_t)(kslot->op2 * sizeof(Node));
+   int32_t kofs = ofs + (int32_t)offsetof(Node, key);
+-  int bigofs = !checki12(ofs);
++  int bigofs = !checki12(kofs);
+   Reg dest = (ra_used(ir) || bigofs) ? ra_dest(as, ir, RSET_GPR) : RID_NONE;
+   Reg node = ra_alloc1(as, ir->op1, RSET_GPR);
+   RegSet allow = rset_exclude(RSET_GPR, node);
+-- 
+2.42.0
+

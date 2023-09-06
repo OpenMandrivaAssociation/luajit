@@ -1,0 +1,31 @@
+From a10a00ee0810f5b4af56e7aff19891f68cff5c0f Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Tue, 13 Dec 2022 17:09:16 +0800
+Subject: [PATCH 012/156] riscv64(interp): fix BC_IS[LT,LE,GT,GE]
+
+Previously some comparison, e.g. "1.1 < 2" would trigger segfault.
+This is due to comparison op failed to determine next BC correctly.
+Fixed by rectify the calculation.
+
+This is a WIP, archive only.
+---
+ src/vm_riscv64.dasc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/vm_riscv64.dasc b/src/vm_riscv64.dasc
+index fb920a42..fc900046 100644
+--- a/src/vm_riscv64.dasc
++++ b/src/vm_riscv64.dasc
+@@ -2340,8 +2340,8 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |  beqz TMP1, >4
+     |  fmv.d.x FTMP0, CARG1
+     |  fmv.d.x FTMP2, CARG2
+-    |  addw TMP2, TMP2, TMP3
+     |3:  // RA and RD are both numbers.
++    |  addw TMP2, TMP2, TMP3
+     if (op == BC_ISLT || op == BC_ISGE) {
+       |  flt.d TMP3, FTMP0, FTMP2
+     } else {
+-- 
+2.42.0
+

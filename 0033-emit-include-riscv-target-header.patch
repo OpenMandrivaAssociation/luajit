@@ -1,0 +1,26 @@
+From 5a49c8dfbb72fa0d3abe821c5c31b880c9f5bceb Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Mon, 13 Feb 2023 23:34:05 +0800
+Subject: [PATCH 033/156] emit: include riscv target header
+
+This is a WIP, archive only.
+---
+ src/lj_asm.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/lj_asm.c b/src/lj_asm.c
+index cd2804f1..d881ea13 100644
+--- a/src/lj_asm.c
++++ b/src/lj_asm.c
+@@ -185,6 +185,8 @@ IRFLDEF(FLOFS)
+ #include "lj_emit_ppc.h"
+ #elif LJ_TARGET_MIPS
+ #include "lj_emit_mips.h"
++#elif LJ_TARGET_RISCV64
++#include "lj_emit_riscv.h"
+ #else
+ #error "Missing instruction emitter for target CPU"
+ #endif
+-- 
+2.42.0
+

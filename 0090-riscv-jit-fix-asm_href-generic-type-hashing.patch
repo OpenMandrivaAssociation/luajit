@@ -1,0 +1,32 @@
+From 3ecd83582a63532c100b36c847c7e8b56a82ecf0 Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Wed, 3 May 2023 03:23:52 +0800
+Subject: [PATCH 090/156] riscv(jit): fix asm_href generic type hashing
+
+This is a WIP, archive only.
+---
+ src/lj_asm_riscv64.h | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/lj_asm_riscv64.h b/src/lj_asm_riscv64.h
+index cdd1b992..db2da3be 100644
+--- a/src/lj_asm_riscv64.h
++++ b/src/lj_asm_riscv64.h
+@@ -749,11 +749,11 @@ static void asm_href(ASMState *as, IRIns *ir, IROp merge)
+     } else {  /* Must match with hash*() in lj_tab.c. */
+       emit_ds1s2(as, RISCVI_SUBW, tmp1, tmp1, tmp2);
+       emit_roti(as, RISCVI_RORIW, tmp2, tmp2, (-HASH_ROT3)&0x1f, allow);
+-      emit_ds1s2(as, RISCVI_XOR, tmp1, tmp2, tmp1);
+-      emit_roti(as, RISCVI_RORIW, tmp2, tmp2, (-HASH_ROT2-HASH_ROT1)&0x1f, allow);
++      emit_ds1s2(as, RISCVI_XOR, tmp1, tmp1, tmp2);
++      emit_roti(as, RISCVI_RORIW, tmp1, tmp1, (-HASH_ROT2-HASH_ROT1)&0x1f, allow);
+       emit_ds1s2(as, RISCVI_SUBW, tmp2, tmp2, dest);
+       emit_ds1s2(as, RISCVI_XOR, tmp2, tmp2, tmp1);
+-      emit_roti(as, RISCVI_RORIW, tmp2, tmp2, (-HASH_ROT1)&0x1f, allow);
++      emit_roti(as, RISCVI_RORIW, dest, tmp1, (-HASH_ROT1)&0x1f, allow);
+       if (irt_isnum(kt)) {
+ 	emit_dsshamt(as, RISCVI_SLLIW, tmp1, tmp1, 1);
+ 	emit_dsshamt(as, RISCVI_SRAI, tmp1, tmp1, 32);	// hi
+-- 
+2.42.0
+

@@ -1,0 +1,28 @@
+From 48e4ce2c5d303de51ea579faf1c1ea81cc0f810b Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Fri, 24 Feb 2023 17:28:00 +0800
+Subject: [PATCH 063/156] riscv(asm): fix asm_href num branch
+
+Refering to other arch, we would like to branch on equal.
+
+This is a WIP, archive only.
+---
+ src/lj_asm_riscv64.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/lj_asm_riscv64.h b/src/lj_asm_riscv64.h
+index 1e0171c9..908f7389 100644
+--- a/src/lj_asm_riscv64.h
++++ b/src/lj_asm_riscv64.h
+@@ -711,7 +711,7 @@ static void asm_href(ASMState *as, IRIns *ir, IROp merge)
+     l_end = asm_exitstub_addr(as);
+   }
+   if (irt_isnum(kt)) {
+-    emit_branch(as, RISCVI_BEQ, tmp1, RID_ZERO, l_end);
++    emit_branch(as, RISCVI_BNE, tmp1, RID_ZERO, l_end);
+     emit_loadk32(as, RID_TMP, as->snapno);
+     emit_ds1s2(as, RISCVI_FEQ_D, tmp1, tmpnum, key);
+     emit_branch(as, RISCVI_BEQ, tmp1, RID_ZERO, l_next);
+-- 
+2.42.0
+

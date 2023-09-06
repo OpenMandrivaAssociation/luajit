@@ -1,0 +1,164 @@
+From 242c52ce085c395f9aceb4cf22c5333d9ffc3124 Mon Sep 17 00:00:00 2001
+From: gns <infiwang@pm.me>
+Date: Sun, 2 Jul 2023 22:25:34 +0800
+Subject: [PATCH 135/156] riscv(jit): probe and emit zba zbb extension
+
+Tested on VisionFive2.
+---
+ src/lib_jit.c        | 52 +++++++++++++++++++++++++++++++++++++++++---
+ src/lj_asm_riscv64.h |  4 ++--
+ src/lj_emit_riscv.h  |  7 +++---
+ src/lj_jit.h         | 13 +++++------
+ 4 files changed, 60 insertions(+), 16 deletions(-)
+
+diff --git a/src/lib_jit.c b/src/lib_jit.c
+index 6f2d775d..4a757ffc 100644
+--- a/src/lib_jit.c
++++ b/src/lib_jit.c
+@@ -648,6 +648,43 @@ JIT_PARAMDEF(JIT_PARAMINIT)
+ #include <sys/utsname.h>
+ #endif
+ 
++#if LJ_TARGET_RISCV64
++#include <setjmp.h>
++#include <signal.h>
++static sigjmp_buf sigbuf = {0};
++static void detect_sigill(int sig) {
++  siglongjmp(sigbuf, 1);
++}
++
++static int rvzba() {
++#if defined(__GNUC__)
++  // Don't bother verifying the result, just check if the instruction exists.
++  // add.uw zero, zero, zero
++  __asm__(".4byte 0x0800003b");
++  return 1;
++#else
++  return 0;
++#endif
++}
++
++static int rvzbb() {
++#if defined(__GNUC__)
++  register int t asm ("a0");
++  // addi a0, zero, 255; sext.b a0, a0;
++  __asm__("addi a0, zero, 255\n\t.4byte 0x60451513");
++  return t < 0;
++#else
++  return 0;
++#endif
++}
++
++static uint32_t riscv_probe(int (*func)(void), uint32_t flag) {
++    if (sigsetjmp(sigbuf, 1) == 0) {
++        return func() ? flag : 0;
++    } else return 0;
++}
++#endif
++
+ /* Arch-dependent CPU feature detection. */
+ static uint32_t jit_cpudetect(void)
+ {
+@@ -721,9 +758,18 @@ static uint32_t jit_cpudetect(void)
+ 
+ #elif LJ_TARGET_RISCV64
+ #if LJ_HASJIT
+-
+-// Detect C/B/V/P?
+-
++  // SIGILL-based detection of Zba and Zbb. Welcome to the future.
++
++  struct sigaction old = {0}, act = {0};
++  act.sa_handler = detect_sigill;
++  sigaction(SIGILL, &act, &old);
++  flags |= riscv_probe(rvzba, JIT_F_RVZba);
++  flags |= riscv_probe(rvzbb, JIT_F_RVZbb);
++  sigaction(SIGILL, &old, NULL);
++
++  // Detect C/V/P?
++  // C would need a chunk of mmap memory, and we don't really care about C currently.
++  // V have no hardware available, P not ratified yet.
+ #endif
+ 
+ #else
+diff --git a/src/lj_asm_riscv64.h b/src/lj_asm_riscv64.h
+index fe19565c..326a50f2 100644
+--- a/src/lj_asm_riscv64.h
++++ b/src/lj_asm_riscv64.h
+@@ -1376,7 +1376,7 @@ static void asm_bswap(ASMState *as, IRIns *ir)
+   Reg dest = ra_dest(as, ir, RSET_GPR);
+   Reg left = ra_alloc1(as, ir->op1, RSET_GPR);
+   RegSet allow = rset_exclude(RSET_GPR, dest);
+-  if (as->flags & JIT_F_RVB) {
++  if (as->flags & JIT_F_RVZbb) {
+     if (!irt_is64(ir->t))
+       emit_dsshamt(as, RISCVI_SRAI, dest, dest, 32);
+     emit_ds(as, RISCVI_REV8, dest, left);
+@@ -1510,7 +1510,7 @@ static void asm_min_max(ASMState *as, IRIns *ir, int ismax)
+     Reg dest = ra_dest(as, ir, RSET_GPR);
+     Reg left = ra_hintalloc(as, ir->op1, dest, RSET_GPR);
+     Reg right = ra_alloc1(as, ir->op2, rset_exclude(RSET_GPR, left));
+-    if (as->flags & JIT_F_RVB) {
++    if (as->flags & JIT_F_RVZbb) {
+       emit_ds1s2(as, ismax ? RISCVI_MAX : RISCVI_MIN, dest, left, right);
+     } else {
+       emit_ds1s2(as, RISCVI_OR, dest, dest, RID_TMP); 
+diff --git a/src/lj_emit_riscv.h b/src/lj_emit_riscv.h
+index 9583a1cc..5996554a 100644
+--- a/src/lj_emit_riscv.h
++++ b/src/lj_emit_riscv.h
+@@ -101,7 +101,7 @@ static void emit_lso(ASMState *as, RISCVIns riscvi, Reg data, Reg base, int32_t
+ 
+ static void emit_roti(ASMState *as, RISCVIns riscvi, Reg rd, Reg rs1, int32_t shamt)
+ {
+-  if (as->flags & JIT_F_RVB) {
++  if (as->flags & JIT_F_RVZbb) {
+     emit_dsshamt(as, riscvi, rd, rs1, shamt);
+   } else {
+     RISCVIns ai, bi;
+@@ -127,7 +127,7 @@ static void emit_roti(ASMState *as, RISCVIns riscvi, Reg rd, Reg rs1, int32_t sh
+ 
+ static void emit_rot(ASMState *as, RISCVIns riscvi, Reg rd, Reg rs1, Reg rs2)
+ {
+-  if (as->flags & JIT_F_RVB) {
++  if (as->flags & JIT_F_RVZbb) {
+     emit_ds1s2(as, riscvi, rd, rs1, rs2);
+   } else {
+     RISCVIns sai, sbi;
+@@ -164,7 +164,8 @@ static void emit_rot(ASMState *as, RISCVIns riscvi, Reg rd, Reg rs1, Reg rs2)
+ 
+ static void emit_ext(ASMState *as, RISCVIns riscvi, Reg rd, Reg rs1)
+ {
+-  if (as->flags & JIT_F_RVB) {
++  if ((riscvi != RISCVI_ZEXT_W && as->flags & JIT_F_RVZbb) ||
++      (riscvi == RISCVI_ZEXT_W && as->flags & JIT_F_RVZba)) {
+     emit_ds(as, riscvi, rd, rs1);
+   } else {
+     RISCVIns sli, sri;
+diff --git a/src/lj_jit.h b/src/lj_jit.h
+index 1d0196f4..7d13b9c1 100644
+--- a/src/lj_jit.h
++++ b/src/lj_jit.h
+@@ -69,14 +69,11 @@
+ 
+ #elif LJ_TARGET_RISCV64
+ 
+-#define JIT_F_RVC        (JIT_F_CPU << 0)
+-#define JIT_F_RVB        (JIT_F_CPU << 1) /* Ask too much? */
+-// #define JIT_F_RVZbb        (JIT_F_CPU << 1) /* What about zext.w? */
+-// #define JIT_F_RVZbkb        (JIT_F_CPU << 1) /* Appropriate? */
+-// #define JIT_F_RVZba        (JIT_F_CPU << 1) /* Combine with Zbb for zext.w */
+-// #define JIT_F_RVZbb        (JIT_F_CPU << 2)
+-
+-#define JIT_F_CPUSTRING		"\000RV64G\010RV64GC\020RV64GB\030RV64GCB"
++#define JIT_F_RVC		(JIT_F_CPU << 0)
++#define JIT_F_RVZba		(JIT_F_CPU << 1)
++#define JIT_F_RVZbb		(JIT_F_CPU << 2)
++
++#define JIT_F_CPUSTRING		"\003RVC\003Zba\003Zbb"
+ 
+ #else
+ 
+-- 
+2.42.0
+

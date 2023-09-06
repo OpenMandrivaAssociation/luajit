@@ -1,0 +1,31 @@
+From 6827af9e8e477906b270e78c43804f02ac1ef1ed Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Thu, 4 May 2023 11:41:20 +0800
+Subject: [PATCH 096/156] riscv(emit): fix emit_jmp
+
+Prevents unintended cfa usage.
+
+This is a WIP, archive only.
+---
+ src/lj_emit_riscv.h | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/src/lj_emit_riscv.h b/src/lj_emit_riscv.h
+index 171be0f4..a417a6c5 100644
+--- a/src/lj_emit_riscv.h
++++ b/src/lj_emit_riscv.h
+@@ -307,9 +307,8 @@ static void emit_jmp(ASMState *as, MCode *target)
+     *--p = RISCVI_NOP;
+     *--p = RISCVI_JAL | RISCVF_IMMJ(delta);
+   } else {
+-    Reg cfa = ra_scratch(as, RID2RSET(RID_CFUNCADDR));
+-    *--p = RISCVI_JALR | RISCVF_S1(cfa) | RISCVF_IMMI(RISCVF_LO(delta));
+-    *--p = RISCVI_AUIPC | RISCVF_D(cfa) | RISCVF_IMMU(RISCVF_HI(delta));
++    *--p = RISCVI_JALR | RISCVF_S1(RID_TMP) | RISCVF_IMMI(RISCVF_LO(delta));
++    *--p = RISCVI_AUIPC | RISCVF_D(RID_TMP) | RISCVF_IMMU(RISCVF_HI(delta));
+   }
+   as->mcp = p;
+ }
+-- 
+2.42.0
+

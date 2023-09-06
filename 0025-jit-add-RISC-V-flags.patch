@@ -1,0 +1,35 @@
+From 063bf02a23d52a0f9be83481bfc92f9e78d96c28 Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Sat, 4 Feb 2023 23:47:25 +0800
+Subject: [PATCH 025/156] jit: add RISC-V flags
+
+This is a WIP, archive only.
+---
+ src/lj_jit.h | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/src/lj_jit.h b/src/lj_jit.h
+index 32b3861a..041fd499 100644
+--- a/src/lj_jit.h
++++ b/src/lj_jit.h
+@@ -67,6 +67,17 @@
+ #endif
+ #endif
+ 
++#elif LJ_TARGET_RISCV64
++
++#define JIT_F_RVC        (JIT_F_CPU << 0)
++#define JIT_F_RVB        (JIT_F_CPU << 1) /* Ask too much? */
++// #define JIT_F_RVZbb        (JIT_F_CPU << 1) /* What about zext.w? */
++// #define JIT_F_RVZbkb        (JIT_F_CPU << 1) /* Appropriate? */
++// #define JIT_F_RVZba        (JIT_F_CPU << 1) /* Combine with Zbb for zext.w */
++// #define JIT_F_RVZbb        (JIT_F_CPU << 2)
++
++#define JIT_F_CPUSTRING		"\000RV64G\010RV64GC\020RV64GB\030RV64GCB"
++
+ #else
+ 
+ #define JIT_F_CPUSTRING		""
+-- 
+2.42.0
+

@@ -1,0 +1,47 @@
+From 344a4d6fb58659d0c4b80ad7e4f24f69bd3c6bf0 Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Tue, 14 Feb 2023 13:26:30 +0800
+Subject: [PATCH 039/156] riscv(target): add missing pseudo-instr
+
+This is a WIP, archive only.
+---
+ src/lj_target_riscv.h | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/src/lj_target_riscv.h b/src/lj_target_riscv.h
+index 2a9d16b7..68412335 100644
+--- a/src/lj_target_riscv.h
++++ b/src/lj_target_riscv.h
+@@ -192,6 +192,10 @@ static LJ_AINLINE uint32_t *exitstub_trace_addr_(uint32_t *p)
+ 
+ /* Check for valid field range. */
+ #define RISCVF_SIMM_OK(x, b)	((((x) + (1 << (b-1))) >> (b)) == 0)
++#define checki12(i)		RISCVF_SIMM_OK(i, 12)
++#define checki13(i)		RISCVF_SIMM_OK(i, 13)
++#define checki20(i)		RISCVF_SIMM_OK(i, 20)
++#define checki21(i)		RISCVF_SIMM_OK(i, 21)
+ 
+ typedef enum RISCVIns {
+ 
+@@ -248,6 +252,7 @@ typedef enum RISCVIns {
+   RISCVI_NOT = 0xfff04013,
+   RISCVI_NEG = 0x40000033,
+   RISCVI_RET = 0x00008067,
++  RISCVI_ZEXT_B = 0x0ff07013,
+ 
+ #if LJ_TARGET_RISCV64
+   RISCVI_LWU = 0x00007003,
+@@ -323,6 +328,10 @@ typedef enum RISCVIns {
+   RISCVI_FCVT_S_W = 0xd0000053,
+   RISCVI_FCVT_S_WU = 0xd0100053,
+   RISCVI_FMV_W_X = 0xf0000033,
++
++  RISCVI_FMV_S = 0x20000053,
++  RISCVI_FNEG_S = 0x20001053,
++  RISCVI_FABS_S = 0x20002053,
+ #if LJ_TARGET_RISCV64
+   RISCVI_FCVT_L_S = 0xc0200053,
+   RISCVI_FCVT_LU_S = 0xc0300053,
+-- 
+2.42.0
+

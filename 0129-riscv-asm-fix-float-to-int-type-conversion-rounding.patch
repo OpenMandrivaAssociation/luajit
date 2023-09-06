@@ -1,0 +1,53 @@
+From 4ceacb38fe7b8d3ec2ef1120eacc314adcb448e8 Mon Sep 17 00:00:00 2001
+From: gns <infiwang@pm.me>
+Date: Sat, 24 Jun 2023 15:37:11 +0800
+Subject: [PATCH 129/156] riscv(asm): fix float to int type conversion rounding
+
+---
+ src/lj_asm_riscv64.h  | 4 ++--
+ src/lj_target_riscv.h | 9 +++++++++
+ 2 files changed, 11 insertions(+), 2 deletions(-)
+
+diff --git a/src/lj_asm_riscv64.h b/src/lj_asm_riscv64.h
+index f8f6190e..9fc528bc 100644
+--- a/src/lj_asm_riscv64.h
++++ b/src/lj_asm_riscv64.h
+@@ -509,7 +509,7 @@ static void asm_conv(ASMState *as, IRIns *ir)
+   (st == IRT_NUM ?
+    (irt_isint(ir->t) ? RISCVI_FCVT_W_D : RISCVI_FCVT_WU_D) :
+    (irt_isint(ir->t) ? RISCVI_FCVT_W_S : RISCVI_FCVT_WU_S));
+-    	emit_ds(as, riscvi, dest, left);
++      emit_ds(as, riscvi|RISCVF_RM(RISCVRM_RTZ), dest, left);
+     }
+   } else if (st >= IRT_I8 && st <= IRT_U16) { /* Extend to 32 bit integer. */
+     Reg dest = ra_dest(as, ir, RSET_GPR);
+@@ -1039,7 +1039,7 @@ static void asm_sload(ASMState *as, IRIns *ir)
+       emit_dsshamt(as, RISCVI_SLLI, dest, dest, 17);
+     } else if (ir->op2 & IRSLOAD_CONVERT) {
+       if (irt_isint(t)) {
+-	emit_ds(as, RISCVI_FCVT_W_D, dest, tmp);
++	emit_ds(as, RISCVI_FCVT_W_D|RISCVF_RM(RISCVRM_RTZ), dest, tmp);
+   /* If value is already loaded for type check, move it to FPR. */
+ 	if ((ir->op2 & IRSLOAD_TYPECHECK))
+ 	  emit_ds(as, RISCVI_FMV_D_X, tmp, dest);
+diff --git a/src/lj_target_riscv.h b/src/lj_target_riscv.h
+index 9d9c0196..2cbd1087 100644
+--- a/src/lj_target_riscv.h
++++ b/src/lj_target_riscv.h
+@@ -464,4 +464,13 @@ typedef enum RISCVIns {
+   /* TBD: RVV?, RVP?, RVJ? */
+ } RISCVIns;
+ 
++typedef enum RISCVRM {
++  RISCVRM_RNE = 0,
++  RISCVRM_RTZ = 1,
++  RISCVRM_RDN = 2,
++  RISCVRM_RUP = 3,
++  RISCVRM_RMM = 4,
++  RISCVRM_DYN = 7,
++} RISCVRM;
++
+ #endif
+-- 
+2.42.0
+

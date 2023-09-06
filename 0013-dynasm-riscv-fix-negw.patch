@@ -1,0 +1,25 @@
+From 47259880ece195f491119b194171e75ac0eb4bc8 Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Tue, 13 Dec 2022 17:42:14 +0800
+Subject: [PATCH 013/156] dynasm: riscv: fix negw
+
+---
+ dynasm/dasm_riscv.lua | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dynasm/dasm_riscv.lua b/dynasm/dasm_riscv.lua
+index 26f52a6f..b5935144 100644
+--- a/dynasm/dasm_riscv.lua
++++ b/dynasm/dasm_riscv.lua
+@@ -457,7 +457,7 @@ local map_op_rv64imafd = {
+   srlw_3 = "0000503bDRr",
+   sraw_3 = "4000503bDRr",
+ 
+-  negw_2 = "4000003bDR",
++  negw_2 = "4000003bDr",
+   ["sext.w_2"] = "0000001bDR",
+ 
+   -- RV64M
+-- 
+2.42.0
+

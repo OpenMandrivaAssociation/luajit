@@ -1,0 +1,26 @@
+From 8036b8ed9e9b619fe58a95d4b066a4e18cb13dac Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Thu, 16 Feb 2023 02:56:19 +0800
+Subject: [PATCH 048/156] riscv(target): fix IMMB encode macro
+
+This is a WIP, archive only.
+---
+ src/lj_target_riscv.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/lj_target_riscv.h b/src/lj_target_riscv.h
+index 68412335..6cbdd842 100644
+--- a/src/lj_target_riscv.h
++++ b/src/lj_target_riscv.h
+@@ -180,7 +180,7 @@ static LJ_AINLINE uint32_t *exitstub_trace_addr_(uint32_t *p)
+ #define RISCVF_RM(m)	(((m)&7) << 12)
+ #define RISCVF_IMMI(i)	((i) << 20)
+ #define RISCVF_IMMS(i)	(((i)&0xfe0) << 20 | ((i)&0x1f) << 7)
+-#define RISCVF_IMMB(i)	(((i)&0x1000) << 19 | ((i)&0x800) << 4 | ((i)&0x7e0) << 20 | ((i)&0x1e) << 7)
++#define RISCVF_IMMB(i)	(((i)&0x1000) << 19 | ((i)&0x800) >> 4 | ((i)&0x7e0) << 20 | ((i)&0x1e) << 7)
+ #define RISCVF_IMMU(i)	(((i)&0xfffff) << 12)
+ #define RISCVF_IMMJ(i)	(((i)&0x100000) << 11 | ((i)&0xff000) | ((i)&0x800) << 9 | ((i)&0x7fe) << 20)
+ 
+-- 
+2.42.0
+

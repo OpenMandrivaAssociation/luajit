@@ -1,0 +1,40 @@
+From 2d68137b32640bb1ee2194be4ad467c1bf97a247 Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Tue, 14 Feb 2023 12:51:17 +0800
+Subject: [PATCH 035/156] riscv(target): drop fixed x5
+
+This is a WIP, archive only.
+---
+ src/lj_target_riscv.h | 8 ++------
+ 1 file changed, 2 insertions(+), 6 deletions(-)
+
+diff --git a/src/lj_target_riscv.h b/src/lj_target_riscv.h
+index 2fafc4ac..9c1dc845 100644
+--- a/src/lj_target_riscv.h
++++ b/src/lj_target_riscv.h
+@@ -84,8 +84,7 @@ enum {
+ /* Make use of all registers, except ZERO, TMP, SP, GP, TP, CFUNCADDR and GL. */
+ #define RSET_FIXED \
+   (RID2RSET(RID_ZERO)|RID2RSET(RID_TMP)|RID2RSET(RID_SP)|\
+-   RID2RSET(RID_GP)|RID2RSET(RID_TP)|RID2RSET(RID_CFUNCADDR)|RID2RSET(RID_GL))
+-// TODO: Fix x5 is hacky, drop it. Referring to arm and arm64 (JGL -> GL).
++   RID2RSET(RID_GP)|RID2RSET(RID_TP)|RID2RSET(RID_GL))
+ #define RSET_GPR	(RSET_RANGE(RID_MIN_GPR, RID_MAX_GPR) - RSET_FIXED)
+ #if LJ_SOFTFP
+ #define RSET_FPR	0
+@@ -97,11 +96,8 @@ enum {
+ #define RSET_INIT	RSET_ALL
+ 
+ #define RSET_SCRATCH_GPR \
+-  (RID2RSET(RID_X1)|RSET_RANGE(RID_X6, RID_X7)|\
++  (RID2RSET(RID_X1)|RSET_RANGE(RID_X5, RID_X7)|\
+    RSET_RANGE(RID_X10, RID_X17)|RSET_RANGE(RID_X28, RID_X31))
+-//    TODO: drop fixed x5
+-//   (RID2RSET(RID_X1)|RSET_RANGE(RID_X5, RID_X7)|\
+-//    RSET_RANGE(RID_X10, RID_X17)|RSET_RANGE(RID_X28, RID_X31))
+ 
+ #if LJ_SOFTFP
+ #define RSET_SCRATCH_FPR	0
+-- 
+2.42.0
+

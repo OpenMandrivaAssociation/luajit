@@ -1,0 +1,30 @@
+From 1adef5c425e9fcbf0823b89a97c48ba83904cc96 Mon Sep 17 00:00:00 2001
+From: gns <infiwang@pm.me>
+Date: Fri, 23 Jun 2023 13:10:03 +0800
+Subject: [PATCH 119/156] riscv(ffi): fix last commit
+
+CFUNCADDR = x5
+
+This is a WIP, archive only.
+---
+ src/vm_riscv64.dasc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/vm_riscv64.dasc b/src/vm_riscv64.dasc
+index 56947360..13a453b5 100644
+--- a/src/vm_riscv64.dasc
++++ b/src/vm_riscv64.dasc
+@@ -2588,9 +2588,9 @@ static void build_subroutines(BuildCtx *ctx)
+   |  saveregs
+   |  ld CTSTATE, GL:x7->ctype_state
+   |  addxi DISPATCH, x7, GG_G2DISP
+-  |  load_got lj_ccallback_leave
+   |  srli x5, x5, 12
+   |  sw x5, CTSTATE->cb.slot
++  |  load_got lj_ccallback_leave
+   |  sd CARG1, CTSTATE->cb.gpr[0]
+   |  fsd FARG1, CTSTATE->cb.fpr[0]
+   |  sd CARG2, CTSTATE->cb.gpr[1]
+-- 
+2.42.0
+

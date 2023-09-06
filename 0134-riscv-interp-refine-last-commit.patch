@@ -1,0 +1,28 @@
+From 8d001170fa1fc2765bb1a3a3ad87d3ef53313f62 Mon Sep 17 00:00:00 2001
+From: gns <infiwang@pm.me>
+Date: Mon, 26 Jun 2023 01:51:48 +0800
+Subject: [PATCH 134/156] riscv(interp): refine last commit
+
+Should help pipeline in simple processor
+(2-cycle multiplier w/ in-order pipeline, ...)
+---
+ src/vm_riscv64.dasc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/vm_riscv64.dasc b/src/vm_riscv64.dasc
+index 0f64ea3b..053ae33c 100644
+--- a/src/vm_riscv64.dasc
++++ b/src/vm_riscv64.dasc
+@@ -3237,8 +3237,8 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |  bxltz TMP1, ->vmeta_arith
+     |.elif "intins" == "mulw"
+     |  mul TMP2, CARG3, CARG4
+-    |  sext.w CRET1, TMP2
+     |  add RA, BASE, RA
++    |  sext.w CRET1, TMP2
+     |  bxne CRET1, TMP2, ->vmeta_arith		// 63-32bit not all 0 or 1: overflow.
+     |.endif
+     |  zext.w CRET1, CRET1
+-- 
+2.42.0
+

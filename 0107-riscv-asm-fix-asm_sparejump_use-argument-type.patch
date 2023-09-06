@@ -1,0 +1,26 @@
+From 5b8136ea3450dacb9c607667ebcd128ee7f70c32 Mon Sep 17 00:00:00 2001
+From: gns <infiwang@pm.me>
+Date: Tue, 6 Jun 2023 00:16:56 +0800
+Subject: [PATCH 107/156] riscv(asm): fix asm_sparejump_use argument type
+
+This is a WIP, archive only.
+---
+ src/lj_asm_riscv64.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/lj_asm_riscv64.h b/src/lj_asm_riscv64.h
+index 80cf4441..4b4f2a35 100644
+--- a/src/lj_asm_riscv64.h
++++ b/src/lj_asm_riscv64.h
+@@ -73,7 +73,7 @@ static void asm_sparejump_setup(ASMState *as)
+   }
+ }
+ 
+-static MCode *asm_sparejump_use(MCode *mcarea, ptrdiff_t target)
++static MCode *asm_sparejump_use(MCode *mcarea, MCode *target)
+ {
+   MCode *mxp = (MCode *)((char *)mcarea + ((MCLink *)mcarea)->size);
+   int slot = RISCV_SPAREJUMP;
+-- 
+2.42.0
+

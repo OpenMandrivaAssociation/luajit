@@ -1,0 +1,130 @@
+From c897659af98f76ed3db588ba696e672ada19d7ae Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Fri, 31 Mar 2023 03:02:58 +0800
+Subject: [PATCH 078/156] riscv(interp): reallocate TMP registers to comply
+ with ABI
+
+RISC-V lp64d ABI favors saved register (s0-s11) more than temporaries (t0-t6).
+Early during porting, we believe wide immediate operations need 4(3) registers.
+We decided to allocate hard-coded temp registers to "t"s as a rather logical
+choice, leaving us less than ideal temporaries. We made the flawed assumption
+that lj_vm's code won't be executed without a context switch, so we chose to
+occupy some saved registers for our purposes, leading to ABI violation.
+
+This commit reduces the number of hard-coded helper macro temporaries from 3 to 1
+in order to allocate TMP registers to temporaries for ABI correctness.
+
+Fix 5ab19d9 "riscv(ffi): FFI init"
+
+This is a WIP, archive only.
+---
+ src/vm_riscv64.dasc | 79 +++++++++++++++------------------------------
+ 1 file changed, 26 insertions(+), 53 deletions(-)
+
+diff --git a/src/vm_riscv64.dasc b/src/vm_riscv64.dasc
+index 77e07649..773772c1 100644
+--- a/src/vm_riscv64.dasc
++++ b/src/vm_riscv64.dasc
+@@ -45,9 +45,9 @@
+ |
+ |.define TMP0,		x6
+ |.define TMP1,		x7
+-|.define TMP2,		x26
+-|.define TMP3,		x27
+-|.define TMP4,		x28
++|.define TMP2,		x28
++|.define TMP3,		x29
++|.define TMP4,		x30
+ |
+ |// RISC-V lp64d calling convention.
+ |.define CFUNCADDR,	x5
+@@ -288,54 +288,6 @@
+ |  srli a, a, 32
+ |.endmacro
+ |
+-|.macro rol, a, b, c
+-|  neg x29, c
+-|  sll x30, b, c
+-|  srl x31, b, x29
+-|  or a, x30, x31
+-|.endmacro
+-|
+-|.macro ror, a, b, c
+-|  neg x29, c
+-|  srl x30, b, c
+-|  sll x31, b, x29
+-|  or a, x30, x31
+-|.endmacro
+-|
+-|.macro rolw, a, b, c
+-|  neg x29, c
+-|  sllw x30, b, c
+-|  srlw x31, b, x29
+-|  or a, x30, x31
+-|.endmacro
+-|
+-|.macro rorw, a, b, c
+-|  neg x29, c
+-|  srlw x30, b, c
+-|  sllw x31, b, x29
+-|  or a, x30, x31
+-|.endmacro
+-|
+-|.macro roli, a, b, c
+-|  li x30, (c)&0xfffff
+-|  rol a, b, x30
+-|.endmacro
+-|
+-|.macro rori, a, b, c
+-|  li x30, (c)&0xfffff
+-|  ror a, b, x30
+-|.endmacro
+-|
+-|.macro roliw, a, b, c
+-|  li x30, (c)&0xfffff
+-|  rolw a, b, x30
+-|.endmacro
+-|
+-|.macro roriw, a, b, c
+-|  li x30, (c)&0xfffff
+-|  rorw a, b, x30
+-|.endmacro
+-|
+ |.macro bfextri, a, b, c, d
+ |  slli a, b, (63-c)
+ |  srli a, a, (d+63-c)
+@@ -2095,8 +2047,29 @@ static void build_subroutines(BuildCtx *ctx)
+   |.ffunc_bit_sh lshift, sllw
+   |.ffunc_bit_sh rshift, srlw
+   |.ffunc_bit_sh arshift, sraw
+-  |.ffunc_bit_sh rol, rolw
+-  |.ffunc_bit_sh ror, rorw
++  |
++  |.macro .ffunc_bit_rot, name, rotinsa, rotinsb
++  |  .ffunc_2 bit_..name
++  |  gettp TMP0, CARG1
++  |  beq TMP0, TISNUM, >1
++  |   sltiu TMP1, TMP0, LJ_TISNUM
++  |  jal ->vm_tobit_fb
++  |//  mv CARG1, CRET1		// CARG1 = CRET1
++  |1:
++  |  gettp TMP0, CARG2
++  |   zext.w CARG2, CARG2
++  |  bxne TMP0, TISNUM, ->fff_fallback
++  |  sext.w CARG1, CARG1
++  |  neg TMP2, CARG2
++  |  rotinsa TMP1, CARG1, CARG2
++  |  rotinsb TMP0, CARG1, TMP2
++  |  or CRET1, TMP0, TMP1
++  |   zext.w CRET1, CRET1
++  |  j ->fff_resi
++  |.endmacro
++  |
++  |.ffunc_bit_rot rol, sllw, srlw
++  |.ffunc_bit_rot ror, srlw, sllw
+   |
+   |//-----------------------------------------------------------------------
+   |
+-- 
+2.42.0
+

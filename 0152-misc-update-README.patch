@@ -1,0 +1,31 @@
+From 4d52da1546aefca9f36172ef48d5639e6325db27 Mon Sep 17 00:00:00 2001
+From: gns <infiwang@pm.me>
+Date: Fri, 4 Aug 2023 17:44:24 +0800
+Subject: [PATCH 152/156] misc: update README
+
+---
+ README.md | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/README.md b/README.md
+index ef79ebf0..298c5ce0 100644
+--- a/README.md
++++ b/README.md
+@@ -20,7 +20,7 @@ For production usage, we suggests disable the JIT compiler during compilation by
+ 
+ ## Bug Report
+ 
+-Please report bugs to [Issues](https://github.com/infiWang/LuaJIT-RV/issues).
++Please report bugs to [Issues](https://github.com/ruyisdk/LuaJIT/issues).
+ 
+ ## Copyright
+ 
+@@ -30,4 +30,4 @@ See full Copyright Notice in the COPYRIGHT file or in luajit.h.
+ 
+ LJRV is Copyright (C) 2022-2023 PLCT Lab, ISCAS. Contributed by gns.
+ LJRV is free software, released under the MIT license.
+-LJRV is part of RuyiSDK, PLCT Lab, ISCAS.
++LJRV is part of RuyiSDK.
+-- 
+2.42.0
+

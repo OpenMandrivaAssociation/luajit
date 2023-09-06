@@ -1,0 +1,32 @@
+From 4152cef3dc30c60d49ba6fc51ef4278908b20313 Mon Sep 17 00:00:00 2001
+From: gns <infiwang@pm.me>
+Date: Tue, 6 Jun 2023 16:55:59 +0800
+Subject: [PATCH 109/156] riscv(emit): drop emit_loadk20
+
+k20 \subset k32. Why not LUI+ADDI(XORI)?
+
+This is a WIP, archive only.
+---
+ src/lj_emit_riscv.h | 6 ------
+ 1 file changed, 6 deletions(-)
+
+diff --git a/src/lj_emit_riscv.h b/src/lj_emit_riscv.h
+index fcf97d03..c203ecc7 100644
+--- a/src/lj_emit_riscv.h
++++ b/src/lj_emit_riscv.h
+@@ -200,12 +200,6 @@ static void emit_loadk12(ASMState *as, Reg rd, int32_t i)
+   emit_di(as, RISCVI_ADDI, rd, i);
+ }
+ 
+-static void emit_loadk20(ASMState *as, Reg rd, int32_t i)
+-{
+-  emit_dsshamt(as, RISCVI_SRAIW, rd, rd, 12);
+-  emit_du(as, RISCVI_LUI, rd, i);
+-}
+-
+ static void emit_loadk32(ASMState *as, Reg rd, int32_t i)
+ {
+   if (checki12(i)) {
+-- 
+2.42.0
+

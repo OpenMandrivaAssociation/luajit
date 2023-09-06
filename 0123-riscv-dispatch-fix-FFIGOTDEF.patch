@@ -1,0 +1,25 @@
+From c6ddf67e4ff3021cc440009fdcc71a5611fa6b22 Mon Sep 17 00:00:00 2001
+From: gns <infiwang@pm.me>
+Date: Fri, 23 Jun 2023 14:47:47 +0800
+Subject: [PATCH 123/156] riscv(dispatch): fix FFIGOTDEF
+
+This is a WIP, archive only.
+---
+ src/lj_dispatch.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/lj_dispatch.h b/src/lj_dispatch.h
+index 515a8dad..51f10ed9 100644
+--- a/src/lj_dispatch.h
++++ b/src/lj_dispatch.h
+@@ -74,6 +74,7 @@ GOTDEF(GOTENUM)
+ #else
+ #define JITGOTDEF(_)
+ #endif
++#if LJ_HASFFI
+ #define FFIGOTDEF(_) \
+   _(lj_meta_equal_cd) _(lj_ccallback_enter) _(lj_ccallback_leave)
+ #else
+-- 
+2.42.0
+

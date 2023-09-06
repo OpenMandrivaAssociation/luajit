@@ -1,0 +1,29 @@
+From 1f81bd4fe7a1e7721648577561555ebe842b0ed0 Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Fri, 31 Mar 2023 02:55:35 +0800
+Subject: [PATCH 077/156] riscv(misc): cleanup nonsense comment
+
+This comment is obviously not correct.
+As a sidenote, presumably this was filled in by autopilot.
+
+This is a WIP, archive only.
+---
+ src/vm_riscv64.dasc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/vm_riscv64.dasc b/src/vm_riscv64.dasc
+index 97d4b128..77e07649 100644
+--- a/src/vm_riscv64.dasc
++++ b/src/vm_riscv64.dasc
+@@ -1122,7 +1122,7 @@ static void build_subroutines(BuildCtx *ctx)
+   |   sd PC, SAVE_PC(sp)
+   |  mv CARG3, RB
+   |  mv CARG4, RC
+-  |  decode_OP1 CARG5, INS	// CARG5 == RB.
++  |  decode_OP1 CARG5, INS
+   |  jal extern lj_meta_arith		// (lua_State *L, TValue *ra,*rb,*rc, BCReg op)
+   |  // Returns NULL (finished) or TValue * (metamethod).
+   |  bxeqz CRET1, ->cont_nop
+-- 
+2.42.0
+

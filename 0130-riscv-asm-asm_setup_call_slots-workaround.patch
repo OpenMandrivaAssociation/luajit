@@ -1,0 +1,49 @@
+From d95b467ea88f30715f81009854970a1cae741b1e Mon Sep 17 00:00:00 2001
+From: gns <infiwang@pm.me>
+Date: Sat, 24 Jun 2023 21:58:25 +0800
+Subject: [PATCH 130/156] riscv(asm): asm_setup_call_slots workaround
+
+Reproducible with O2 and luajit-aarch64/test/call_vararg.lua
+
+Looks like a heritage directly from MIPS.
+WHY ARE WE SPILLING CALLEE SAVED REGS HERE???
+Better find out...
+
+Btw loongarch is also broken.
+---
+ src/lj_asm_riscv64.h | 19 ++++++-------------
+ 1 file changed, 6 insertions(+), 13 deletions(-)
+
+diff --git a/src/lj_asm_riscv64.h b/src/lj_asm_riscv64.h
+index 9fc528bc..fe19565c 100644
+--- a/src/lj_asm_riscv64.h
++++ b/src/lj_asm_riscv64.h
+@@ -1862,19 +1862,12 @@ static Reg asm_setup_call_slots(ASMState *as, IRIns *ir, const CCallInfo *ci)
+   int nslots = 0, ngpr = REGARG_NUMGPR, nfpr = REGARG_NUMFPR;
+   asm_collectargs(as, ir, ci, args);
+   for (i = 0; i < nargs; i++) {
+-    if (args[i] && irt_isfp(IR(args[i])->t)) {
+-      if (nfpr > 0)
+-  nfpr--;
+-      else if (ngpr > 0)
+-	ngpr--;
+-      else
+-	nslots += 2;
+-    } else {
+-      if (ngpr > 0)
+-	ngpr--;
+-      else
+-	nslots += 2;
+-    }
++  //   if (args[i] && irt_isfp(IR(args[i])->t)) {
++  //     if (nfpr > 0) nfpr--; else if (ngpr > 0) ngpr--;
++  //     else nslots += 2;
++  //   } else {
++      if (ngpr > 0) ngpr--; else nslots += 2;
++    // }
+   }
+   if (nslots > as->evenspill)  /* Leave room for args in stack slots. */
+     as->evenspill = nslots;
+-- 
+2.42.0
+

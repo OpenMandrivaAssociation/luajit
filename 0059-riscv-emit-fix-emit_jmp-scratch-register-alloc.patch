@@ -1,0 +1,28 @@
+From f3fc196009ff99e855d5f29517d05259995eee61 Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Thu, 23 Feb 2023 20:40:48 +0800
+Subject: [PATCH 059/156] riscv(emit): fix emit_jmp scratch register alloc
+
+ra_scratch's second argument is allowed RegSet.
+
+This is a WIP, archive only.
+---
+ src/lj_emit_riscv.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/lj_emit_riscv.h b/src/lj_emit_riscv.h
+index 71c281e9..171be0f4 100644
+--- a/src/lj_emit_riscv.h
++++ b/src/lj_emit_riscv.h
+@@ -336,7 +336,7 @@ static void emit_call(ASMState *as, void *target, int needcfa)
+   if (needcfa > 1)
+     ra_allockreg(as, (intptr_t)target, RID_CFUNCADDR); 
+   else if (needcfa > 0)
+-    ra_scratch(as, RID_CFUNCADDR);
++    ra_scratch(as, RID2RSET(RID_CFUNCADDR));
+ }
+ 
+ /* -- Emit generic operations --------------------------------------------- */
+-- 
+2.42.0
+

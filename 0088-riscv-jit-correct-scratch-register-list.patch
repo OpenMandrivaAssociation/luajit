@@ -1,0 +1,37 @@
+From 0daefb5c54f4adf03b6b9e3a1b5e9de8f44b62b7 Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Tue, 2 May 2023 16:36:29 +0800
+Subject: [PATCH 088/156] riscv(jit): correct scratch register list
+
+This is a WIP, archive only.
+---
+ src/lj_target_riscv.h | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/src/lj_target_riscv.h b/src/lj_target_riscv.h
+index 1d0c5cce..f9fe2f27 100644
+--- a/src/lj_target_riscv.h
++++ b/src/lj_target_riscv.h
+@@ -96,15 +96,15 @@ enum {
+ #define RSET_INIT	RSET_ALL
+ 
+ #define RSET_SCRATCH_GPR \
+-  (RSET_RANGE(RID_X5, RID_X7)|RSET_RANGE(RID_X28, RID_X31)|\
+-   RSET_RANGE(RID_X10, RID_X17))
++  (RSET_RANGE(RID_X5, RID_X7+1)|RSET_RANGE(RID_X28, RID_X31+1)|\
++   RSET_RANGE(RID_X10, RID_X17+1))
+ 
+ #if LJ_SOFTFP
+ #define RSET_SCRATCH_FPR	0
+ #else
+ #define RSET_SCRATCH_FPR \
+-  (RSET_RANGE(RID_F0, RID_F7)|RSET_RANGE(RID_F10, RID_F17)|\
+-   RSET_RANGE(RID_F28, RID_F31))
++  (RSET_RANGE(RID_F0, RID_F7+1)|RSET_RANGE(RID_F10, RID_F17+1)|\
++   RSET_RANGE(RID_F28, RID_F31+1))
+ #endif
+ #define RSET_SCRATCH		(RSET_SCRATCH_GPR|RSET_SCRATCH_FPR)
+ 
+-- 
+2.42.0
+

@@ -1,0 +1,32 @@
+From 95a7e546ffda65138e42960aa77211ac3f1d2a81 Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Fri, 24 Feb 2023 17:35:27 +0800
+Subject: [PATCH 064/156] riscv(asm): refine asm_href bit select semantic
+
+This is a WIP, archive only.
+---
+ src/lj_asm_riscv64.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/lj_asm_riscv64.h b/src/lj_asm_riscv64.h
+index 908f7389..f1117655 100644
+--- a/src/lj_asm_riscv64.h
++++ b/src/lj_asm_riscv64.h
+@@ -763,12 +763,12 @@ static void asm_href(ASMState *as, IRIns *ir, IROp merge)
+       if (irt_isnum(kt)) {
+ 	emit_dsshamt(as, RISCVI_SLLIW, tmp1, tmp1, 1);
+ 	emit_dsshamt(as, RISCVI_SRAI, tmp1, tmp1, 32);	// hi
+-	emit_dsshamt(as, RISCVI_SLLIW, tmp2, tmp1, 0);	// lo
++	emit_ext(as, RISCVI_SEXT_W, tmp2, tmp1);	// lo
+ 	emit_ds(as, RISCVI_FMV_X_D, tmp1, key);
+       } else {
+ 	checkmclim(as);
+ 	emit_dsshamt(as, RISCVI_SRAI, tmp1, tmp1, 32);	// hi
+-	emit_dsshamt(as, RISCVI_SLLIW, tmp2, key, 0);	// lo
++	emit_ext(as, RISCVI_SEXT_W, tmp2, key);	// lo
+ 	emit_ds1s2(as, RISCVI_ADD, tmp1, key, type);
+       }
+     }
+-- 
+2.42.0
+

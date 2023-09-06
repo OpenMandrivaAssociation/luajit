@@ -1,0 +1,26 @@
+From 3e1be1920960a3ea972c151afc98ab37a850da4d Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Mon, 27 Mar 2023 23:19:49 +0800
+Subject: [PATCH 071/156] riscv(jit): fix lj_vmeta_for dispatch
+
+This is a WIP, archive only.
+---
+ src/vm_riscv64.dasc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/vm_riscv64.dasc b/src/vm_riscv64.dasc
+index 58ce0cf3..7dd59af2 100644
+--- a/src/vm_riscv64.dasc
++++ b/src/vm_riscv64.dasc
+@@ -1201,7 +1201,7 @@ static void build_subroutines(BuildCtx *ctx)
+   |  mv MULTRES, INS
+   |  jal extern lj_meta_for	// (lua_State *L, TValue *base)
+   |.if JIT
+-  |  decode_OP8 TMP0, MULTRES
++  |  decode_OP1 TMP0, MULTRES
+   |  li TMP1, BC_JFORI
+   |.endif
+   |  decode_RA8 RA, MULTRES
+-- 
+2.42.0
+

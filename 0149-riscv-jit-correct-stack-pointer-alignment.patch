@@ -1,0 +1,27 @@
+From 4288520d59a9bec07a4de2635614e4eb51499603 Mon Sep 17 00:00:00 2001
+From: gns <infiwang@pm.me>
+Date: Sat, 15 Jul 2023 15:15:09 +0800
+Subject: [PATCH 149/156] riscv(jit): correct stack pointer alignment
+
+"the stack pointer shall be aligned to a 128-bit boundary upon
+procedure entry"
+---
+ src/lj_target_riscv.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/lj_target_riscv.h b/src/lj_target_riscv.h
+index 2bb5bf59..50894931 100644
+--- a/src/lj_target_riscv.h
++++ b/src/lj_target_riscv.h
+@@ -141,7 +141,7 @@ enum {
+ #define SPOFS_TMP	0
+ 
+ #define sps_scale(slot)		(4 * (int32_t)(slot))
+-#define sps_align(slot)		(((slot) - SPS_FIXED + 1) & ~1)
++#define sps_align(slot)		(((slot) - SPS_FIXED + 3) & ~3)
+ 
+ /* -- Exit state ---------------------------------------------------------- */
+ /* This definition must match with the *.dasc file(s). */
+-- 
+2.42.0
+

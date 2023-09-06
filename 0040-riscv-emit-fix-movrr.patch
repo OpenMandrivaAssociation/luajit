@@ -1,0 +1,32 @@
+From 3d945170b2b05fb763a52e0449e5cbfba0df96fa Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Tue, 14 Feb 2023 13:29:39 +0800
+Subject: [PATCH 040/156] riscv(emit): fix movrr
+
+This is a WIP, archive only.
+---
+ src/lj_emit_riscv.h | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/lj_emit_riscv.h b/src/lj_emit_riscv.h
+index 3b8d5c11..e4aea5c6 100644
+--- a/src/lj_emit_riscv.h
++++ b/src/lj_emit_riscv.h
+@@ -337,11 +337,11 @@ static void emit_movrr(ASMState *as, IRIns *ir, Reg dst, Reg src)
+   if (src < RID_MAX_GPR && dst < RID_MAX_GPR)
+     emit_mv(as, dst, src);
+   else if (src < RID_MAX_GPR)
+-    emit_dsi(as, irt_isnum(ir->t) ? RISCVI_FMV_D_X : RISCVI_FMV_W_X, dst, src, 0);
++    emit_ds(as, irt_isnum(ir->t) ? RISCVI_FMV_D_X : RISCVI_FMV_W_X, dst, src);
+   else if (dst < RID_MAX_GPR)
+-    emit_dsi(as, irt_isnum(ir->t) ? RISCVI_FMV_X_D : RISCVI_FMV_X_W, dst, src, 0);
++    emit_ds(as, irt_isnum(ir->t) ? RISCVI_FMV_X_D : RISCVI_FMV_X_W, dst, src);
+   else
+-    emit_dsi(as, irt_isnum(ir->t) ? RISCVI_FMV_D : RISCVI_FMV_S, dst, src, 0);
++    emit_ds1s2(as, irt_isnum(ir->t) ? RISCVI_FMV_D : RISCVI_FMV_S, dst, src, src);
+ }
+ 
+ /* Emit an arithmetic operation with a constant operand. */
+-- 
+2.42.0
+

@@ -1,0 +1,26 @@
+From 9df9d9637ef1df296dfe1a2166428942c27260de Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Tue, 14 Feb 2023 13:02:28 +0800
+Subject: [PATCH 036/156] target: correct RISC-V header
+
+This is a WIP, archive only.
+---
+ src/lj_target.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/lj_target.h b/src/lj_target.h
+index 6b7a518e..5423a2e6 100644
+--- a/src/lj_target.h
++++ b/src/lj_target.h
+@@ -144,7 +144,7 @@ typedef uint32_t RegCost;
+ #include "lj_target_ppc.h"
+ #elif LJ_TARGET_MIPS
+ #include "lj_target_mips.h"
+-#elif LJ_TARGET_RISCV
++#elif LJ_TARGET_RISCV64
+ #include "lj_target_riscv.h"
+ #else
+ #error "Missing include for target CPU"
+-- 
+2.42.0
+

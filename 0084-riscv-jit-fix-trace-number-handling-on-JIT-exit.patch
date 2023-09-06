@@ -1,0 +1,81 @@
+From 43c235d553b2de0f2407874df2758797b1f5133e Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Mon, 17 Apr 2023 01:02:17 +0800
+Subject: [PATCH 084/156] riscv(jit): fix trace number handling on JIT exit
+
+It appears to be difficult to allocate register properly during exitstub setup.
+Previous approach would lead to unintended t0(cfa) register usage, hence do it
+the aarch64 way.
+
+This is a WIP, archive only.
+---
+ src/lj_asm_riscv64.h | 30 +++++++++++-------------------
+ src/vm_riscv64.dasc  |  2 ++
+ 2 files changed, 13 insertions(+), 19 deletions(-)
+
+diff --git a/src/lj_asm_riscv64.h b/src/lj_asm_riscv64.h
+index 2686c1c8..e68ece3e 100644
+--- a/src/lj_asm_riscv64.h
++++ b/src/lj_asm_riscv64.h
+@@ -102,30 +102,22 @@ static void asm_exitstub_setup(ASMState *as)
+   MCode *mxp = as->mctop;
+   if (as->mcp == mxp)
+     --as->mcp;
+-  /* sw TMP, 0(sp); li TMP, traceno; jr ->vm_exit_handler;*/
+-  *--mxp = RISCVI_JALR | RISCVF_S1(RID_CFUNCADDR);
+-  *--mxp = RISCVI_ADDI | RISCVF_D(RID_CFUNCADDR) | RISCVF_S1(RID_CFUNCADDR)
++  /* sw TMP, 0(sp); jalr ->vm_exit_handler; lui x0, traceno;*/
++  *--mxp = RISCVI_LUI | RISCVF_IMMU(as->T->traceno);
++  *--mxp = RISCVI_JALR | RISCVF_D(RID_RA) | RISCVF_S1(RID_TMP);
++  *--mxp = RISCVI_ADDI | RISCVF_D(RID_TMP) | RISCVF_S1(RID_TMP)
+             | RISCVF_IMMI(((uintptr_t)(void *)lj_vm_exit_handler) & 0x3ff);
+-  *--mxp = RISCVI_SLLI | RISCVF_D(RID_CFUNCADDR) | RISCVF_S1(RID_CFUNCADDR) | RISCVF_SHAMT(10);
+-  *--mxp = RISCVI_ADDI | RISCVF_D(RID_CFUNCADDR) | RISCVF_S1(RID_CFUNCADDR)
++  *--mxp = RISCVI_SLLI | RISCVF_D(RID_TMP) | RISCVF_S1(RID_TMP) | RISCVF_SHAMT(10);
++  *--mxp = RISCVI_ADDI | RISCVF_D(RID_TMP) | RISCVF_S1(RID_TMP)
+             | RISCVF_IMMI(((uintptr_t)(void *)lj_vm_exit_handler >> 10) & 0x7ff);
+-  *--mxp = RISCVI_SLLI | RISCVF_D(RID_CFUNCADDR) | RISCVF_S1(RID_CFUNCADDR) | RISCVF_SHAMT(11);
+-  *--mxp = RISCVI_ADDI | RISCVF_D(RID_CFUNCADDR) | RISCVF_S1(RID_CFUNCADDR)
++  *--mxp = RISCVI_SLLI | RISCVF_D(RID_TMP) | RISCVF_S1(RID_TMP) | RISCVF_SHAMT(11);
++  *--mxp = RISCVI_ADDI | RISCVF_D(RID_TMP) | RISCVF_S1(RID_TMP)
+             | RISCVF_IMMI(((uintptr_t)(void *)lj_vm_exit_handler >> 21) & 0x7ff);
+-  *--mxp = RISCVI_SLLI | RISCVF_D(RID_CFUNCADDR) | RISCVF_S1(RID_CFUNCADDR) | RISCVF_SHAMT(11);
+-  *--mxp = RISCVI_ADDI | RISCVF_D(RID_CFUNCADDR) | RISCVF_S1(RID_CFUNCADDR)
++  *--mxp = RISCVI_SLLI | RISCVF_D(RID_TMP) | RISCVF_S1(RID_TMP) | RISCVF_SHAMT(11);
++  *--mxp = RISCVI_ADDI | RISCVF_D(RID_TMP) | RISCVF_S1(RID_TMP)
+             | RISCVF_IMMI(RISCVF_LO(((uintptr_t)(void *)lj_vm_exit_handler) >> 32));
+-  *--mxp = RISCVI_LUI | RISCVF_D(RID_CFUNCADDR)
++  *--mxp = RISCVI_LUI | RISCVF_D(RID_TMP)
+             | RISCVF_IMMU(RISCVF_HI(((uintptr_t)(void *)lj_vm_exit_handler) >> 32));
+-  if (checki12(as->T->traceno)) {
+-    *--mxp = RISCVI_ADDI | RISCVF_D(RID_TMP) | RISCVF_S1(RID_ZERO)
+-              | RISCVF_IMMI(as->T->traceno);
+-  } else {
+-    *--mxp = RISCVI_ADDI | RISCVF_D(RID_TMP) | RISCVF_S1(RID_TMP)
+-              | RISCVF_IMMI(RISCVF_LO(as->T->traceno));
+-    *--mxp = RISCVI_LUI | RISCVF_D(RID_TMP)
+-              | RISCVF_IMMU(RISCVF_HI(as->T->traceno));
+-  }
+   *--mxp = RISCVI_SW | RISCVF_S2(RID_TMP) | RISCVF_S1(RID_SP);
+   as->mctop = mxp;
+ }
+diff --git a/src/vm_riscv64.dasc b/src/vm_riscv64.dasc
+index 773772c1..92259b57 100644
+--- a/src/vm_riscv64.dasc
++++ b/src/vm_riscv64.dasc
+@@ -2350,10 +2350,12 @@ static void build_subroutines(BuildCtx *ctx)
+   |  addi CARG1, GL, GG_G2J
+   |  // addi CARG2, CARG1, 1		// We don't care what's on the verge.
+   |  addi CARG2, CARG1, 2047		// jit_State too large.
++  |  lw ra, 0(ra)			// Load trace number.
+   |  lw TMP1, 0(TMP2)			// Load exit number.
+   |  st_vmstate
+   |  ld L, GL->cur_L
+   |  ld BASE, GL->jit_base
++  |  srli ra, ra, 12
+   |  sd L, (offsetof(jit_State, L)-2047)(CARG2)
+   |  sw ra, (offsetof(jit_State, parent)-2047)(CARG2)	// Store trace number.
+   |  sd BASE, L->base
+-- 
+2.42.0
+

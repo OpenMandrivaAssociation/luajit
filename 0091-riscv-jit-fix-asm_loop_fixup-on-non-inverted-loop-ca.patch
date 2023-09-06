@@ -1,0 +1,39 @@
+From 806f6fb30d47325b32778821dbdcb7d7426b40a7 Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Wed, 3 May 2023 15:07:39 +0800
+Subject: [PATCH 091/156] riscv(jit): fix asm_loop_fixup on non-inverted loop
+ case
+
+This is a WIP, archive only.
+---
+ src/lj_asm_riscv64.h | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/lj_asm_riscv64.h b/src/lj_asm_riscv64.h
+index db2da3be..10e38c47 100644
+--- a/src/lj_asm_riscv64.h
++++ b/src/lj_asm_riscv64.h
+@@ -1767,9 +1767,9 @@ static void asm_loop_fixup(ASMState *as)
+ {
+   MCode *p = as->mctop;
+   MCode *target = as->mcp;
+-  ptrdiff_t delta = (char *)target - (char *)(p - 3);
++  ptrdiff_t delta;
+   if (as->loopinv) {  /* Inverted loop branch? */
+-    // delta = target - (p - 1);
++    delta = (char *)target - (char *)(p - 3);
+     /* asm_guard* already inverted the branch, and patched the final b. */
+     lj_assertA(checki21(delta), "branch target out of range");
+     p[-1] = RISCVI_NOP;
+@@ -1782,7 +1782,7 @@ static void asm_loop_fixup(ASMState *as)
+     }
+   } else {
+     /* J */
+-    // delta = target - (p - 1);
++    delta = (char *)target - (char *)(p - 1);
+     p[-1] = RISCVI_JAL | RISCVF_IMMJ(delta);
+   }
+ }
+-- 
+2.42.0
+

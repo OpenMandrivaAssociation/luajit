@@ -1,0 +1,26 @@
+From d6af8a0383ca63ecd0b46c2c9307e216159c9b09 Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Wed, 3 May 2023 18:15:04 +0800
+Subject: [PATCH 092/156] riscv(jit): fix asm_tobit
+
+This is a WIP, archive only.
+---
+ src/lj_asm_riscv64.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/lj_asm_riscv64.h b/src/lj_asm_riscv64.h
+index 10e38c47..b1fe5564 100644
+--- a/src/lj_asm_riscv64.h
++++ b/src/lj_asm_riscv64.h
+@@ -447,7 +447,7 @@ static void asm_tobit(ASMState *as, IRIns *ir)
+   Reg left = ra_alloc1(as, ir->op1, allow);
+   Reg right = ra_alloc1(as, ir->op2, rset_clear(allow, left));
+   Reg tmp = ra_scratch(as, rset_clear(allow, right));
+-  emit_ds(as, RISCVI_FMV_X_D, dest, tmp);
++  emit_ds(as, RISCVI_FMV_X_W, dest, tmp);
+   emit_ds1s2(as, RISCVI_FADD_D, tmp, left, right);
+ }
+ 
+-- 
+2.42.0
+

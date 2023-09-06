@@ -1,0 +1,25 @@
+From 949c8aa3f2e030ede508606dbda30777757c71df Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Wed, 22 Feb 2023 23:23:01 +0800
+Subject: [PATCH 057/156] riscv(asm): drop unused variable
+
+This is a WIP, archive only.
+---
+ src/lj_asm_riscv64.h | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/src/lj_asm_riscv64.h b/src/lj_asm_riscv64.h
+index da7c4930..df277dc7 100644
+--- a/src/lj_asm_riscv64.h
++++ b/src/lj_asm_riscv64.h
+@@ -1839,7 +1839,6 @@ static void asm_tail_fixup(ASMState *as, TraceNo lnk)
+     p[-3] = RISCVI_ADDI | RISCVF_D(RID_SP) | RISCVF_S1(RID_SP) | RISCVF_IMMI(spadj);
+   }
+   /* Patch exit jump. */
+-  MCode *tmp = p;
+   ptrdiff_t delta = (char *)target - (char *)(p - 2);
+   if (checki21(delta)) {
+     p[-2] = RISCVI_JAL | RISCVF_IMMJ(delta);
+-- 
+2.42.0
+

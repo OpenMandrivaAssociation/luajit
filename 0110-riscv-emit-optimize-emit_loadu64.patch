@@ -1,0 +1,48 @@
+From 5581491de42fb7be0db5c10d85e2aee0ab902d11 Mon Sep 17 00:00:00 2001
+From: gns <infiwang@pm.me>
+Date: Tue, 6 Jun 2023 17:12:09 +0800
+Subject: [PATCH 110/156] riscv(emit): optimize emit_loadu64
+
+The last case could be furthur optimized.
+
+This is a WIP, archive only.
+---
+ src/lj_emit_riscv.h | 22 +++++++++++++++-------
+ 1 file changed, 15 insertions(+), 7 deletions(-)
+
+diff --git a/src/lj_emit_riscv.h b/src/lj_emit_riscv.h
+index c203ecc7..c0b51aa1 100644
+--- a/src/lj_emit_riscv.h
++++ b/src/lj_emit_riscv.h
+@@ -228,13 +228,21 @@ static void emit_loadu64(ASMState *as, Reg r, uint64_t u64)
+   if (checki32((int64_t)u64)) {
+     emit_loadk32(as, r, (int32_t)u64);
+   } else {
+-    emit_dsi(as, RISCVI_ADDI, r, r, u64 & 0x3ff);
+-    emit_dsshamt(as, RISCVI_SLLI, r, r, 10);
+-    emit_dsi(as, RISCVI_ADDI, r, r, (u64 >> 10) & 0x7ff);
+-    emit_dsshamt(as, RISCVI_SLLI, r, r, 11);
+-    emit_dsi(as, RISCVI_ADDI, r, r, (u64 >> 21) & 0x7ff);
+-    emit_dsshamt(as, RISCVI_SLLI, r, r, 11);
+-    emit_loadk32(as, r, (u64 >> 32) & 0xffffffff);
++    if (!(u64 & 0x00000fffffffffff)) {
++      emit_dsshamt(as, RISCVI_SLLI, r, r, 44);
++      emit_du(as, RISCVI_LUI, r, (u64 >> 44) & 0xfffff);
++    } else if (!(u64 & 0xffffffff)) {
++      emit_dsshamt(as, RISCVI_SLLI, r, r, 32);
++      emit_loadk32(as, r, (u64 >> 32) & 0xffffffff);
++    } else {
++      emit_dsi(as, RISCVI_ADDI, r, r, u64 & 0x3ff);
++      emit_dsshamt(as, RISCVI_SLLI, r, r, 10);
++      emit_dsi(as, RISCVI_ADDI, r, r, (u64 >> 10) & 0x7ff);
++      emit_dsshamt(as, RISCVI_SLLI, r, r, 11);
++      emit_dsi(as, RISCVI_ADDI, r, r, (u64 >> 21) & 0x7ff);
++      emit_dsshamt(as, RISCVI_SLLI, r, r, 11);
++      emit_loadk32(as, r, (u64 >> 32) & 0xffffffff);
++    }
+   }
+ }
+ 
+-- 
+2.42.0
+

@@ -1,0 +1,28 @@
+From f7bb6f5f2b4d94bd5bfab88c48fc31329e1b6041 Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Thu, 15 Dec 2022 01:29:13 +0800
+Subject: [PATCH 018/156] riscv(interp): remove stale math helper condition
+
+This floor/ceil path is unnecessary(?) and not in use currently.
+
+This is a WIP, archive only.
+---
+ src/lj_vm.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/lj_vm.h b/src/lj_vm.h
+index 324686f3..c66db004 100644
+--- a/src/lj_vm.h
++++ b/src/lj_vm.h
+@@ -58,7 +58,7 @@ LJ_ASMF void lj_vm_exit_handler(void);
+ LJ_ASMF void lj_vm_exit_interp(void);
+ 
+ /* Internal math helper functions. */
+-#if LJ_TARGET_PPC || LJ_TARGET_ARM64 || (LJ_TARGET_MIPS && LJ_ABI_SOFTFP) || LJ_TARGET_RV64
++#if LJ_TARGET_PPC || LJ_TARGET_ARM64 || (LJ_TARGET_MIPS && LJ_ABI_SOFTFP)
+ #define lj_vm_floor	floor
+ #define lj_vm_ceil	ceil
+ #else
+-- 
+2.42.0
+

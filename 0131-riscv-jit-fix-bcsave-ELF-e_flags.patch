@@ -1,0 +1,28 @@
+From cd4c9366c41691c6741e3f283b1fa870bbf5509c Mon Sep 17 00:00:00 2001
+From: gns <infiwang@pm.me>
+Date: Sun, 25 Jun 2023 01:16:46 +0800
+Subject: [PATCH 131/156] riscv(jit): fix bcsave ELF e_flags
+
+Apparently map_arch.f represents e_flags in the ELF header.
+LJRV generates rv64g mcode, so set EF_RISCV_FLOAT_ABI_DOUBLE and
+leave every other field zero.
+---
+ src/jit/bcsave.lua | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/jit/bcsave.lua b/src/jit/bcsave.lua
+index 23809742..88a6045c 100644
+--- a/src/jit/bcsave.lua
++++ b/src/jit/bcsave.lua
+@@ -97,7 +97,7 @@ local map_arch = {
+   mips64el =	{ e = "le", b = 64, m = 8, f = 0x80000007, },
+   mips64r6 =	{ e = "be", b = 64, m = 8, f = 0xa0000407, },
+   mips64r6el =	{ e = "le", b = 64, m = 8, f = 0xa0000407, },
+-  riscv64 =    { e = "le", b = 64, m = 243, f = 0x80000007, }, --- TODO: f = ?
++  riscv64 =    { e = "le", b = 64, m = 243, f = 0x00000004, },
+ }
+ 
+ local map_os = {
+-- 
+2.42.0
+

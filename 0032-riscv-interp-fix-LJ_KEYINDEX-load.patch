@@ -1,0 +1,31 @@
+From 89b9d10bcd5d72736625a102be08c2816d2a746c Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Mon, 13 Feb 2023 23:21:06 +0800
+Subject: [PATCH 032/156] riscv(interp): fix LJ_KEYINDEX load
+
+LJ KEYINDEX constant was loaded using the LUI+ADDI pair. Later, we
+discovered sign-extend is a must since ADDI only accept i12 parameter.
+With the help of this commit, RISC-V 64 target can now be built without
+ignoring DynASM warnings. Hurray!
+
+This is a WIP, archive only.
+---
+ src/vm_riscv64.dasc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/vm_riscv64.dasc b/src/vm_riscv64.dasc
+index 37ea5bcf..af98b8b9 100644
+--- a/src/vm_riscv64.dasc
++++ b/src/vm_riscv64.dasc
+@@ -3981,7 +3981,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |   lui TMP1, ((LJ_KEYINDEX - (((LJ_KEYINDEX & 0xfff)^0x800) - 0x800)) >> 12) & 0xfffff
+     |  bnez TMP3, >5
+     |  add PC, TMP0, TMP2
+-    |  addi TMP1, TMP1, (LJ_KEYINDEX & 0xfff)
++    |  addi TMP1, TMP1, (((LJ_KEYINDEX & 0xfff)^0x800) - 0x800)
+     |  slli TMP1, TMP1, 32
+     |  sd TMP1, -8(RA)
+     |1:
+-- 
+2.42.0
+

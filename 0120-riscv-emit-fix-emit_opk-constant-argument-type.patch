@@ -1,0 +1,26 @@
+From 7712dacd8eaad13d8da115fa3e3609f257a1e5f4 Mon Sep 17 00:00:00 2001
+From: gns <infiwang@pm.me>
+Date: Fri, 23 Jun 2023 13:25:21 +0800
+Subject: [PATCH 120/156] riscv(emit): fix emit_opk constant argument type
+
+This is a WIP, archive only.
+---
+ src/lj_emit_riscv.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/lj_emit_riscv.h b/src/lj_emit_riscv.h
+index c00bdaa6..7a99f5e6 100644
+--- a/src/lj_emit_riscv.h
++++ b/src/lj_emit_riscv.h
+@@ -375,7 +375,7 @@ static void emit_movrr(ASMState *as, IRIns *ir, Reg dst, Reg src)
+ 
+ /* Emit an arithmetic operation with a constant operand. */
+ static void emit_opk(ASMState *as, RISCVIns riscvi, Reg dest, Reg src,
+-         int32_t i, RegSet allow)
++         intptr_t i, RegSet allow)
+ {
+   if (((riscvi == RISCVI_ADDI) && checki12(i)) ||
+       (((riscvi == RISCVI_XORI) || (riscvi == RISCVI_ORI)) &&
+-- 
+2.42.0
+

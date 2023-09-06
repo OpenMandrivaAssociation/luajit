@@ -1,0 +1,30 @@
+From b554fedf76bc6840b929a2489e08d4337e30ad8e Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Wed, 14 Dec 2022 00:07:34 +0800
+Subject: [PATCH 016/156] dynasm: riscv: allow orderedPair work with minilua
+
+It appears that minilua have table.getn stripped, therefore detect
+table length manually.
+Fix commit 9a13444.
+---
+ dynasm/dasm_riscv.lua | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/dynasm/dasm_riscv.lua b/dynasm/dasm_riscv.lua
+index ba0f19d4..92a1156a 100644
+--- a/dynasm/dasm_riscv.lua
++++ b/dynasm/dasm_riscv.lua
+@@ -55,7 +55,9 @@ local function __orderedNext(t, state)
+         key = t.__orderedIndex[1]
+     else
+         -- fetch the next value
+-        for i = 1,table.getn(t.__orderedIndex) do
++        local j = 0
++        for _,_ in pairs(t.__orderedIndex) do j = j + 1 end
++        for i = 1, j do
+             if t.__orderedIndex[i] == state then
+                 key = t.__orderedIndex[i+1]
+             end
+-- 
+2.42.0
+

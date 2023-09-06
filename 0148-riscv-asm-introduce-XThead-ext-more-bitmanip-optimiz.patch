@@ -1,0 +1,385 @@
+From 6133bcb1fbb4371fc8e69279970d94e9c7fa69b0 Mon Sep 17 00:00:00 2001
+From: gns <infiwang@pm.me>
+Date: Wed, 12 Jul 2023 12:17:38 +0800
+Subject: [PATCH 148/156] riscv(asm): introduce XThead* ext, more bitmanip
+ optimization
+
+Since C906 is everywhere, Optimize for XThead should be a reasonable choice.
+Also add some missing optimizations.
+---
+ src/lib_jit.c         | 17 +++++++-
+ src/lj_asm_riscv64.h  | 71 +++++++++++++++++++++++++--------
+ src/lj_emit_riscv.h   | 93 ++++++++++++++++++++++++++++++++++++++++++-
+ src/lj_jit.h          |  3 +-
+ src/lj_target_riscv.h | 39 +++++++++++++++++-
+ 5 files changed, 202 insertions(+), 21 deletions(-)
+
+diff --git a/src/lib_jit.c b/src/lib_jit.c
+index 06313af5..b2ccfa2a 100644
+--- a/src/lib_jit.c
++++ b/src/lib_jit.c
+@@ -695,6 +695,20 @@ static int riscv_zbb()
+ #endif
+ }
+ 
++static int riscv_xthead()
++{
++#if defined(__GNUC__)
++    register int t asm ("a0");
++    // C906 & C910 & C908 all have "xtheadc", XTheadBb subset "xtheadc".
++    // Therefore assume XThead* are present if XTheadBb is present.
++    // addi a0, zero, 255; th.ext a0, a0, 7, 0;
++    __asm__("addi a0, zero, 255\n\t.4byte 0x1c05250b");
++    return t == -1;		// In case of collision with other vendor extensions.
++#else
++    return 0;
++#endif
++}
++
+ static uint32_t riscv_probe(int (*func)(void), uint32_t flag)
+ {
+     if (sigsetjmp(sigbuf, 1) == 0) {
+@@ -776,13 +790,14 @@ static uint32_t jit_cpudetect(void)
+ 
+ #elif LJ_TARGET_RISCV64
+ #if LJ_HASJIT
+-  // SIGILL-based detection of RVC, Zba and Zbb. Welcome to the future.
++  // SIGILL-based detection of RVC, Zba, Zbb and XThead. Welcome to the future.
+   struct sigaction old = {0}, act = {0};
+   act.sa_handler = detect_sigill;
+   sigaction(SIGILL, &act, &old);
+   flags |= riscv_probe(riscv_compressed, JIT_F_RVC);
+   flags |= riscv_probe(riscv_zba, JIT_F_RVZba);
+   flags |= riscv_probe(riscv_zbb, JIT_F_RVZbb);
++  flags |= riscv_probe(riscv_xthead, JIT_F_RVXThead);
+   sigaction(SIGILL, &old, NULL);
+ 
+   // Detect V/P?
+diff --git a/src/lj_asm_riscv64.h b/src/lj_asm_riscv64.h
+index 988642a8..d40859cc 100644
+--- a/src/lj_asm_riscv64.h
++++ b/src/lj_asm_riscv64.h
+@@ -250,6 +250,29 @@ static void asm_fusexref(ASMState *as, RISCVIns riscvi, Reg rd, IRRef ref,
+   emit_lso(as, riscvi, rd, base, ofs);
+ }
+ 
++/* Fuse Integer multiply-accumulate. */
++
++static int asm_fusemac(ASMState *as, IRIns *ir, RISCVIns riscvi)
++{
++  IRRef lref = ir->op1, rref = ir->op2;
++  IRIns *irm;
++  if (lref != rref &&
++      ((mayfuse(as, lref) && (irm = IR(lref), irm->o == IR_MUL) &&
++       ra_noreg(irm->r)) ||
++       (mayfuse(as, rref) && (irm = IR(rref), irm->o == IR_MUL) &&
++       (rref = lref, ra_noreg(irm->r))))) {
++    Reg dest = ra_dest(as, ir, RSET_GPR);
++    Reg add = ra_hintalloc(as, rref, dest, RSET_GPR);
++    Reg left = ra_alloc2(as, irm,
++       rset_exclude(rset_exclude(RSET_GPR, dest), add));
++    Reg right = (left >> 8); left &= 255;
++    emit_ds1s2(as, riscvi, dest, left, right);
++    if (dest != add) emit_mv(as, dest, add);
++    return 1;
++  }
++  return 0;
++}
++
+ /* Fuse FP multiply-add/sub. */
+ 
+ static int asm_fusemadd(ASMState *as, IRIns *ir, RISCVIns riscvi, RISCVIns riscvir)
+@@ -625,8 +648,7 @@ static void asm_aref(ASMState *as, IRIns *ir)
+   }
+   base = ra_alloc1(as, ir->op1, RSET_GPR);
+   idx = ra_alloc1(as, ir->op2, rset_exclude(RSET_GPR, base));
+-  emit_ds1s2(as, RISCVI_ADD, dest, RID_TMP, base);
+-  emit_dsshamt(as, RISCVI_SLLI, RID_TMP, idx, 3);
++  emit_sh3add(as, dest, base, idx);
+ }
+ 
+ /* Inlined hash lookup. Specialized for key type and for const keys.
+@@ -939,8 +961,7 @@ static void asm_ahuvload(ASMState *as, IRIns *ir)
+     dest = ra_dest(as, ir, irt_isnum(t) ? RSET_FPR : allow);
+     rset_clear(allow, dest);
+     if (irt_isaddr(t)) {
+-      emit_dsshamt(as, RISCVI_SRLI, dest, dest, 17);
+-      emit_dsshamt(as, RISCVI_SLLI, dest, dest, 17);
++      emit_cleartp(as, dest, dest);
+     } else if (irt_isint(t))
+       emit_ext(as, RISCVI_SEXT_W, dest, dest);
+   }
+@@ -1027,8 +1048,7 @@ static void asm_sload(ASMState *as, IRIns *ir)
+     base = ra_alloc1(as, REF_BASE, allow);
+     rset_clear(allow, base);
+     if (irt_isaddr(t)) { /* Clear type from pointers. */
+-      emit_dsshamt(as, RISCVI_SRLI, dest, dest, 17);
+-      emit_dsshamt(as, RISCVI_SLLI, dest, dest, 17);
++      emit_cleartp(as, dest, dest);
+     } else if (ir->op2 & IRSLOAD_CONVERT) {
+       if (irt_isint(t)) {
+ 	emit_ds(as, RISCVI_FCVT_W_D|RISCVF_RM(RISCVRM_RTZ), dest, tmp);
+@@ -1226,6 +1246,8 @@ static void asm_add(ASMState *as, IRIns *ir)
+       asm_fparith(as, ir, RISCVI_FADD_D);
+     return;
+   } else {
++    if ((as->flags & JIT_F_RVXThead) && asm_fusemac(as, ir, RISCVI_TH_MULA))
++      return;
+     Reg dest = ra_dest(as, ir, RSET_GPR);
+     Reg left = ra_hintalloc(as, ir->op1, dest, RSET_GPR);
+     if (irref_isk(ir->op2)) {
+@@ -1252,6 +1274,8 @@ static void asm_sub(ASMState *as, IRIns *ir)
+       asm_fparith(as, ir, RISCVI_FSUB_D);
+     return;
+   } else {
++    if ((as->flags & JIT_F_RVXThead) && asm_fusemac(as, ir, RISCVI_TH_MULS))
++      return;
+     Reg dest = ra_dest(as, ir, RSET_GPR);
+     Reg right, left = ra_alloc2(as, ir, RSET_GPR);
+     right = (left >> 8); left &= 255;
+@@ -1317,8 +1341,7 @@ static void asm_arithov(ASMState *as, IRIns *ir)
+   if (ir->o == IR_ADDOV) {  /* ((dest^left) & (dest^right)) < 0 */
+     emit_ds1s2(as, RISCVI_XOR, RID_TMP, dest, dest == right ? RID_TMP : right);
+   } else {  /* ((dest^left) & (dest^~right)) < 0 */
+-    emit_ds1s2(as, RISCVI_XOR, RID_TMP, RID_TMP, dest);
+-    emit_ds(as, RISCVI_NOT, RID_TMP, dest == right ? RID_TMP : right);
++    emit_xnor(as, RID_TMP, dest, dest == right ? RID_TMP : right);
+   }
+   emit_ds1s2(as, RISCVI_XOR, tmp, dest, dest == left ? RID_TMP : left);
+   emit_ds1s2(as, ir->o == IR_ADDOV ? RISCVI_ADDW : RISCVI_SUBW, dest, left, right);
+@@ -1362,6 +1385,9 @@ static void asm_bswap(ASMState *as, IRIns *ir)
+     if (!irt_is64(ir->t))
+       emit_dsshamt(as, RISCVI_SRAI, dest, dest, 32);
+     emit_ds(as, RISCVI_REV8, dest, left);
++  } else if (as->flags & JIT_F_RVXThead) {
++    emit_ds(as, irt_is64(ir->t) ? RISCVI_TH_REV : RISCVI_TH_REVW,
++       dest, left);
+   } else if (irt_is64(ir->t)) {
+     Reg tmp1, tmp2, tmp3, tmp4;
+     tmp1 = ra_scratch(as, allow), allow = rset_exclude(allow, tmp1);
+@@ -1510,17 +1536,28 @@ static void asm_min_max(ASMState *as, IRIns *ir, int ismax)
+     if (as->flags & JIT_F_RVZbb) {
+       emit_ds1s2(as, ismax ? RISCVI_MAX : RISCVI_MIN, dest, left, right);
+     } else {
+-      emit_ds1s2(as, RISCVI_OR, dest, dest, RID_TMP); 
+-      if (dest != right) {
+-  emit_ds1s2(as, RISCVI_AND, RID_TMP, RID_TMP,right); 
+-  emit_ds(as, RISCVI_NOT, RID_TMP, RID_TMP);
+-  emit_ds1s2(as, RISCVI_AND, dest, left, RID_TMP);
++      if (as->flags & JIT_F_RVXThead) {
++  if (left == right) {
++    if (dest != left) emit_mv(as, dest, left);
++  } else {
++    if (dest == left) {
++	    emit_ds1s2(as, RISCVI_TH_MVNEZ, dest, right, RID_TMP);
++    } else {
++	    emit_ds1s2(as, RISCVI_TH_MVEQZ, dest, left, RID_TMP);
++	    if (dest != right) emit_mv(as, dest, right);
++    }
++  }
+       } else {
+-  emit_ds1s2(as, RISCVI_AND, RID_TMP, RID_TMP, left); 
+-  emit_ds(as, RISCVI_NOT, RID_TMP, RID_TMP);
+-  emit_ds1s2(as, RISCVI_AND, dest, right, RID_TMP);
++  emit_ds1s2(as, RISCVI_OR, dest, dest, RID_TMP);
++  if (dest != right) {
++    emit_andn(as, RID_TMP, right, RID_TMP, RID_TMP);
++    emit_ds1s2(as, RISCVI_AND, dest, left, RID_TMP);
++  } else {
++    emit_andn(as, RID_TMP, left, RID_TMP, RID_TMP);
++    emit_ds1s2(as, RISCVI_AND, dest, right, RID_TMP);
++  }
++  emit_dsi(as, RISCVI_ADDI, RID_TMP, RID_TMP, -1);
+       }
+-      emit_dsi(as, RISCVI_ADDI, RID_TMP, RID_TMP, -1);
+       emit_ds1s2(as, RISCVI_SLT, RID_TMP,
+          ismax ? left : right, ismax ? right : left);
+     }
+diff --git a/src/lj_emit_riscv.h b/src/lj_emit_riscv.h
+index f711ed07..c7273d56 100644
+--- a/src/lj_emit_riscv.h
++++ b/src/lj_emit_riscv.h
+@@ -101,7 +101,12 @@ static void emit_lso(ASMState *as, RISCVIns riscvi, Reg data, Reg base, int32_t
+ 
+ static void emit_roti(ASMState *as, RISCVIns riscvi, Reg rd, Reg rs1, int32_t shamt)
+ {
+-  if (as->flags & JIT_F_RVZbb) {
++  if (as->flags & JIT_F_RVZbb || as->flags & JIT_F_RVXThead) {
++    if (as->flags & JIT_F_RVXThead) switch (riscvi) {
++      case RISCVI_RORI: riscvi = RISCVI_TH_SRRI; break;
++      case RISCVI_RORIW: riscvi = RISCVI_TH_SRRIW; break;
++      default: lj_assertA(0, "invalid roti op"); break;
++    }
+     emit_dsshamt(as, riscvi, rd, rs1, shamt);
+   } else {
+     RISCVIns ai, bi;
+@@ -167,6 +172,31 @@ static void emit_ext(ASMState *as, RISCVIns riscvi, Reg rd, Reg rs1)
+   if ((riscvi != RISCVI_ZEXT_W && as->flags & JIT_F_RVZbb) ||
+       (riscvi == RISCVI_ZEXT_W && as->flags & JIT_F_RVZba)) {
+     emit_ds(as, riscvi, rd, rs1);
++  } else if (as->flags & JIT_F_RVXThead) {
++    uint32_t hi, sext;
++    switch (riscvi) {
++      case RISCVI_ZEXT_B:
++      case RISCVI_SEXT_W:
++        emit_ds(as, riscvi, rd, rs1);
++        return;
++      case RISCVI_ZEXT_H:
++        hi = 15, sext = 0;
++        break;
++      case RISCVI_ZEXT_W:
++        hi = 31, sext = 0;
++        break;
++      case RISCVI_SEXT_B:
++        hi = 7, sext = 1;
++        break;
++      case RISCVI_SEXT_H:
++        hi = 15, sext = 1;
++        break;
++      default:
++        lj_assertA(0, "invalid ext op");
++        return;
++    }
++    emit_dsi(as, sext ? RISCVI_TH_EXT : RISCVI_TH_EXTU,
++      rd, rs1, hi << 6);
+   } else {
+     RISCVIns sli, sri;
+     int32_t shamt;
+@@ -200,6 +230,67 @@ static void emit_ext(ASMState *as, RISCVIns riscvi, Reg rd, Reg rs1)
+   }
+ }
+ 
++static void emit_cleartp(ASMState *as, Reg rd, Reg rs1)
++{
++  if (as->flags & JIT_F_RVXThead) {
++    emit_dsi(as, RISCVI_TH_EXTU, rd, rs1, 46u << 6);
++  } else {
++    emit_dsshamt(as, RISCVI_SRLI, rd, rd, 17);
++    emit_dsshamt(as, RISCVI_SLLI, rd, rs1, 17);
++  }
++}
++
++static void emit_andn(ASMState *as, Reg rd, Reg rs1, Reg rs2, Reg tmp)
++{
++  if (as->flags & JIT_F_RVZbb) {
++    emit_ds1s2(as, RISCVI_ANDN, rd, rs1, rs2);
++  } else {
++    emit_ds1s2(as, RISCVI_AND, rd, rs1, tmp);
++    emit_ds(as, RISCVI_NOT, tmp, rs2);
++  }
++}
++
++static void emit_orn(ASMState *as, Reg rd, Reg rs1, Reg rs2, Reg tmp)
++{
++  if (as->flags & JIT_F_RVZbb) {
++    emit_ds1s2(as, RISCVI_ORN, rd, rs1, rs2);
++  } else {
++    emit_ds1s2(as, RISCVI_OR, rd, rs1, tmp);
++    emit_ds(as, RISCVI_NOT, tmp, rs2);
++  }
++}
++
++static void emit_xnor(ASMState *as, Reg rd, Reg rs1, Reg rs2)
++{
++  if (as->flags & JIT_F_RVZbb) {
++    emit_ds1s2(as, RISCVI_XNOR, rd, rs1, rs2);
++  } else {
++    emit_ds(as, RISCVI_NOT, rd, rd);
++    emit_ds1s2(as, RISCVI_XOR, rd, rs1, rs2);
++  }
++}
++
++static void emit_shxadd(ASMState *as, Reg rd, Reg rs1, Reg rs2, unsigned int shamt)
++{
++  if (as->flags & JIT_F_RVZba) {
++    switch (shamt) {
++      case 1: emit_ds1s2(as, RISCVI_SH1ADD, rd, rs2, rs1); break;
++      case 2: emit_ds1s2(as, RISCVI_SH2ADD, rd, rs2, rs1); break;
++      case 3: emit_ds1s2(as, RISCVI_SH3ADD, rd, rs2, rs1); break;
++      default: return;
++    }
++  } else if (as->flags & JIT_F_RVXThead) {
++    emit_dsi(as, RISCVI_TH_ADDSL|RISCVF_IMMI(shamt<<5), rd, rs1, rs2);
++  } else {
++    emit_ds1s2(as, RISCVI_ADD, rd, rs1, RID_TMP);
++    emit_dsshamt(as, RISCVI_SLLI, RID_TMP, rs2, 3);
++  }
++}
++
++#define emit_sh1add(as, rd, rs1, rs2) emit_shxadd(as, rd, rs1, rs2, 1)
++#define emit_sh2add(as, rd, rs1, rs2) emit_shxadd(as, rd, rs1, rs2, 2)
++#define emit_sh3add(as, rd, rs1, rs2) emit_shxadd(as, rd, rs1, rs2, 3)
++
+ static void emit_loadk12(ASMState *as, Reg rd, int32_t i)
+ {
+   emit_di(as, RISCVI_ADDI, rd, i);
+diff --git a/src/lj_jit.h b/src/lj_jit.h
+index 7d13b9c1..5f916444 100644
+--- a/src/lj_jit.h
++++ b/src/lj_jit.h
+@@ -72,8 +72,9 @@
+ #define JIT_F_RVC		(JIT_F_CPU << 0)
+ #define JIT_F_RVZba		(JIT_F_CPU << 1)
+ #define JIT_F_RVZbb		(JIT_F_CPU << 2)
++#define JIT_F_RVXThead		(JIT_F_CPU << 3)
+ 
+-#define JIT_F_CPUSTRING		"\003RVC\003Zba\003Zbb"
++#define JIT_F_CPUSTRING		"\003RVC\003Zba\003Zbb\006XThead"
+ 
+ #else
+ 
+diff --git a/src/lj_target_riscv.h b/src/lj_target_riscv.h
+index 2cbd1087..2bb5bf59 100644
+--- a/src/lj_target_riscv.h
++++ b/src/lj_target_riscv.h
+@@ -459,9 +459,46 @@ typedef enum RISCVIns {
+   RISCVI_RORW = 0x6000503b,
+ #endif
+   /* NYI: Zbc, Zbs */
+-  /* TBD: Zbk* */
+ 
+   /* TBD: RVV?, RVP?, RVJ? */
++
++  /* --- XThead* --- */
++  /* XTHeadBa */
++  RISCVI_TH_ADDSL = 0x0000100b,
++
++  /* XTHeadBb */
++  RISCVI_TH_SRRI = 0x1000100b,
++#if LJ_TARGET_RISCV64
++  RISCVI_TH_SRRIW = 0x1400100b,
++#endif
++  RISCVI_TH_EXT = 0x0000200b,
++  RISCVI_TH_EXTU = 0x0000300b,
++  RISCVI_TH_FF0 = 0x8400100b,
++  RISCVI_TH_FF1 = 0x8600100b,
++  RISCVI_TH_REV = 0x8200100b,
++#if LJ_TARGET_RISCV64
++  RISCVI_TH_REVW = 0x9000100b,
++#endif
++  RISCVI_TH_TSTNBZ = 0x8000100b,
++
++  /* XTHeadBs */
++  RISCVI_TH_TST = 0x8800100b,
++
++  /* XTHeadCondMov */
++  RISCVI_TH_MVEQZ = 0x4000100b,
++  RISCVI_TH_MVNEZ = 0x4200100b,
++
++  /* XTHeadMac */
++  RISCVI_TH_MULA = 0x2000100b,
++  RISCVI_TH_MULAH = 0x2800100b,
++#if LJ_TARGET_RISCV64
++  RISCVI_TH_MULAW = 0x2400100b,
++#endif
++  RISCVI_TH_MULS = 0x2200100b,
++  RISCVI_TH_MULSH = 0x2a00100b,
++  RISCVI_TH_MULSW = 0x2600100b,
++
++  /* NYI: XTHeadMemIdx, XTHeadFMemIdx, XTHeadMemPair */
+ } RISCVIns;
+ 
+ typedef enum RISCVRM {
+-- 
+2.42.0
+

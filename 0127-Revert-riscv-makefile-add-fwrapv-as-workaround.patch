@@ -1,0 +1,26 @@
+From 3a065de57b2d64cc846873a5da5bc739adb340b1 Mon Sep 17 00:00:00 2001
+From: gns <infiwang@pm.me>
+Date: Fri, 23 Jun 2023 21:14:28 +0800
+Subject: [PATCH 127/156] Revert "riscv(makefile): add fwrapv as workaround"
+
+This reverts commit 5f95b792731249de4b344bebc3aa78f3b425d341.
+---
+ src/Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/Makefile b/src/Makefile
+index 92fb59d0..108825e4 100644
+--- a/src/Makefile
++++ b/src/Makefile
+@@ -53,7 +53,7 @@ CCOPT_arm=
+ CCOPT_arm64=
+ CCOPT_ppc=
+ CCOPT_mips=
+-CCOPT_riscv64= -fwrapv # Workaround for now. Possibly UB?
++CCOPT_riscv64=
+ #
+ CCDEBUG=
+ # Uncomment the next line to generate debug information:
+-- 
+2.42.0
+

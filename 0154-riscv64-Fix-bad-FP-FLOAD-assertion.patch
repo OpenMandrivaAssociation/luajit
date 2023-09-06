@@ -1,0 +1,27 @@
+From a7fcbd83829b6ccd220bbbaf0afb47df928eb5f8 Mon Sep 17 00:00:00 2001
+From: gns <infiwang@pm.me>
+Date: Sun, 13 Aug 2023 14:33:06 +0800
+Subject: [PATCH 154/156] riscv64: Fix "bad FP FLOAD" assertion
+
+---
+ src/lj_asm_riscv64.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/lj_asm_riscv64.h b/src/lj_asm_riscv64.h
+index 7f8c56a3..1b4958bf 100644
+--- a/src/lj_asm_riscv64.h
++++ b/src/lj_asm_riscv64.h
+@@ -912,9 +912,9 @@ static void asm_fload(ASMState *as, IRIns *ir)
+       }
+     }
+     ofs = field_ofs[ir->op2];
++    lj_assertA(!irt_isfp(ir->t), "bad FP FLOAD");
+   }
+   rset_clear(allow, idx);
+-  lj_assertA(!irt_isfp(ir->t), "bad FP FLOAD");
+   emit_lso(as, riscvi, dest, idx, ofs);
+ }
+ 
+-- 
+2.42.0
+

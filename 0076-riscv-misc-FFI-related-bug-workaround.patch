@@ -1,0 +1,30 @@
+From 7c5b92527e0dacce1ff8776fa7955cc04aeee5da Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Thu, 30 Mar 2023 01:32:58 +0800
+Subject: [PATCH 076/156] riscv(misc): FFI related bug workaround
+
+With GCC/Clang and a optimization level equal or greater than O2, metatable related
+pointer would go wild somehow, result in segfault. Artifacts compiled with O1 looks
+fine with LuaJIT/LuaJIT-test-cleanup and Sysbench, so default to O1 as a workaround.
+
+This is a WIP, archive only.
+---
+ src/Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/Makefile b/src/Makefile
+index 108825e4..9dd7dfc1 100644
+--- a/src/Makefile
++++ b/src/Makefile
+@@ -36,7 +36,7 @@ CC= $(DEFAULT_CC)
+ # to slow down the C part by not omitting it. Debugging, tracebacks and
+ # unwinding are not affected -- the assembler part has frame unwind
+ # information and GCC emits it where needed (x64) or with -g (see CCDEBUG).
+-CCOPT= -O2 -fomit-frame-pointer
++CCOPT= -O1 -fomit-frame-pointer
+ # Use this if you want to generate a smaller binary (but it's slower):
+ #CCOPT= -Os -fomit-frame-pointer
+ # Note: it's no longer recommended to use -O3 with GCC 4.x.
+-- 
+2.42.0
+

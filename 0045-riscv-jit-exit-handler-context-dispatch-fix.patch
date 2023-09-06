@@ -1,0 +1,35 @@
+From 2feb96c3c85eff8a20d05551f943f324cdac83a3 Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Thu, 16 Feb 2023 00:46:03 +0800
+Subject: [PATCH 045/156] riscv(jit): exit handler context/dispatch fix
+
+Fix DISPATCH context recovery and instruction dispatch on JIT exit.
+
+This is a WIP, archive only.
+---
+ src/vm_riscv64.dasc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/vm_riscv64.dasc b/src/vm_riscv64.dasc
+index c8bb97a3..fb547e90 100644
+--- a/src/vm_riscv64.dasc
++++ b/src/vm_riscv64.dasc
+@@ -2352,6 +2352,7 @@ static void build_subroutines(BuildCtx *ctx)
+   |  addi TMP2, sp, 32*8+32*8		// Recompute original value of sp.
+   |  sd TMP2, 32*8+2*8(sp)		// Store sp in RID_SP
+   |  li_vmstate EXIT
++  |  addxi DISPATCH, GL, GG_G2DISP
+   |  addi CARG1, GL, GG_G2J
+   |  // addi CARG2, CARG1, 1		// We don't care what's on the verge.
+   |  addi CARG2, CARG1, 2047		// jit_State too large.
+@@ -2402,7 +2403,6 @@ static void build_subroutines(BuildCtx *ctx)
+   |  // Assumes TISNIL == ~LJ_VMST_INTERP == -1
+   |  sw TISNIL, GL->vmstate
+   |  decode_OP8 TMP1, INS
+-  |  decode_BC8b TMP1
+   |  sltiu TMP2, TMP1, BC_FUNCF*8
+   |  add TMP0, DISPATCH, TMP1
+   |  decode_RD8 RD, INS
+-- 
+2.42.0
+

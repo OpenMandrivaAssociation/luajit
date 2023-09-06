@@ -1,0 +1,184 @@
+From 2532287fec20ec801c73fb86622f3e5c6b82efca Mon Sep 17 00:00:00 2001
+From: gns <infiwang@pm.me>
+Date: Fri, 23 Jun 2023 04:50:09 +0800
+Subject: [PATCH 118/156] riscv(ffi): callback initial fix
+
+LuaJIT-test-cleanup #284 failing w/ O3
+
+This is a WIP, archive only.
+---
+ src/lj_ccallback.c  | 37 ++++++++++++++++++++++---------------
+ src/lj_dispatch.h   | 16 ++++++++++++++--
+ src/vm_riscv64.dasc | 23 +++++++++++++----------
+ 3 files changed, 49 insertions(+), 27 deletions(-)
+
+diff --git a/src/lj_ccallback.c b/src/lj_ccallback.c
+index dd7404d5..94a9207d 100644
+--- a/src/lj_ccallback.c
++++ b/src/lj_ccallback.c
+@@ -71,6 +71,10 @@ static MSize CALLBACK_OFS2SLOT(MSize ofs)
+ 
+ #define CALLBACK_MCODE_HEAD		52
+ 
++#elif LJ_TARGET_RISCV64
++
++#define CALLBACK_MCODE_HEAD		68
++
+ #else
+ 
+ /* Missing support for this architecture. */
+@@ -241,28 +245,31 @@ static void *callback_mcode_init(global_State *g, uint32_t *page)
+ #elif LJ_TARGET_RISCV64
+ static void *callback_mcode_init(global_State *g, uint32_t *page)
+ {
+-  // FIXME: BROKEN! Though JIT is not ready anyway.
+   uint32_t *p = page;
+   uintptr_t target = (uintptr_t)(void *)lj_vm_ffi_callback;
+   uintptr_t ug = (uintptr_t)(void *)g;
+   uintptr_t target_hi = (target >> 32), target_lo = target & 0xffffffffULL;
+   uintptr_t ug_hi = (ug >> 32), ug_lo = ug & 0xffffffffULL;
+   MSize slot;
+-  *p++ = RISCVI_LUI  | RISCVF_D(RID_X6)  | RISCVF_IMMU(RISCVF_HI(target >> 32));
+-  *p++ = RISCVI_LUI  | RISCVF_D(RID_X7)  | RISCVF_IMMU(RISCVF_HI(target & 0xffffffff));
+-  *p++ = RISCVI_LUI  | RISCVF_D(RID_X30) | RISCVF_IMMU(RISCVF_HI(ug >> 32));
+-  *p++ = RISCVI_LUI  | RISCVF_D(RID_X31) | RISCVF_IMMU(RISCVF_HI(ug & 0xffffffff));
+-  *p++ = RISCVI_ADDI | RISCVF_D(RID_X6)  | RISCVF_S1(RID_X6)  | RISCVF_IMMI(RISCVF_LO(target_hi));
+-  *p++ = RISCVI_ADDI | RISCVF_D(RID_X7)  | RISCVF_S1(RID_X7)  | RISCVF_IMMI(RISCVF_LO(target_lo));
+-  *p++ = RISCVI_ADDI | RISCVF_D(RID_X30) | RISCVF_S1(RID_X30) | RISCVF_IMMI(RISCVF_LO(ug_hi));
+-  *p++ = RISCVI_ADDI | RISCVF_D(RID_X31) | RISCVF_S1(RID_X31) | RISCVF_IMMI(RISCVF_LO(ug_lo));
+-  *p++ = RISCVI_SLLI | RISCVF_D(RID_X6)  | RISCVF_S1(RID_X6)  | RISCVF_SHAMT(32);
+-  *p++ = RISCVI_SLLI | RISCVF_D(RID_X30) | RISCVF_S1(RID_X30) | RISCVF_SHAMT(32);
+-  *p++ = RISCVI_OR   | RISCVF_D(RID_X5)  | RISCVF_S1(RID_X6)  | RISCVF_S2(RID_X7);
+-  *p++ = RISCVI_OR   | RISCVF_D(RID_X17) | RISCVF_S1(RID_X30) | RISCVF_S2(RID_X31);
+-  *p++ = RISCVI_JALR | RISCVF_D(RID_X0)  | RISCVF_S1(RID_X5)  | RISCVF_IMMJ(0);
++  *p++ = RISCVI_LUI  | RISCVF_D(RID_X6) | RISCVF_IMMU(RISCVF_HI(target_hi));
++  *p++ = RISCVI_LUI  | RISCVF_D(RID_X7) | RISCVF_IMMU(RISCVF_HI(ug_hi));
++  *p++ = RISCVI_ADDI | RISCVF_D(RID_X6) | RISCVF_S1(RID_X6) | RISCVF_IMMI(RISCVF_LO(target_hi));
++  *p++ = RISCVI_ADDI | RISCVF_D(RID_X7) | RISCVF_S1(RID_X7) | RISCVF_IMMI(RISCVF_LO(ug_hi));
++  *p++ = RISCVI_SLLI | RISCVF_D(RID_X6) | RISCVF_S1(RID_X6) | RISCVF_SHAMT(11);
++  *p++ = RISCVI_SLLI | RISCVF_D(RID_X7) | RISCVF_S1(RID_X7) | RISCVF_SHAMT(11);
++  *p++ = RISCVI_ADDI | RISCVF_D(RID_X6) | RISCVF_S1(RID_X6) | RISCVF_IMMI(target_lo >> 21);
++  *p++ = RISCVI_ADDI | RISCVF_D(RID_X7) | RISCVF_S1(RID_X7) | RISCVF_IMMI(ug_lo >> 21);
++  *p++ = RISCVI_SLLI | RISCVF_D(RID_X6) | RISCVF_S1(RID_X6) | RISCVF_SHAMT(11);
++  *p++ = RISCVI_SLLI | RISCVF_D(RID_X7) | RISCVF_S1(RID_X7) | RISCVF_SHAMT(11);
++  *p++ = RISCVI_ADDI | RISCVF_D(RID_X6) | RISCVF_S1(RID_X6) | RISCVF_IMMI((target_lo >> 10) & 0x7ff);
++  *p++ = RISCVI_ADDI | RISCVF_D(RID_X7) | RISCVF_S1(RID_X7) | RISCVF_IMMI((ug_lo >> 10) & 0x7ff);
++  *p++ = RISCVI_SLLI | RISCVF_D(RID_X6) | RISCVF_S1(RID_X6) | RISCVF_SHAMT(10);
++  *p++ = RISCVI_SLLI | RISCVF_D(RID_X7) | RISCVF_S1(RID_X7) | RISCVF_SHAMT(10);
++  *p++ = RISCVI_ADDI | RISCVF_D(RID_X6) | RISCVF_S1(RID_X6) | RISCVF_IMMI(target_lo & 0x3ff);
++  *p++ = RISCVI_ADDI | RISCVF_D(RID_X7) | RISCVF_S1(RID_X7) | RISCVF_IMMI(ug_lo & 0x3ff);
++  *p++ = RISCVI_JALR | RISCVF_D(RID_X0) | RISCVF_S1(RID_X6) | RISCVF_IMMJ(0);
+   for (slot = 0; slot < CALLBACK_MAX_SLOT; slot++) {
+-    *p++ = RISCVI_ORI | RISCVF_D(RID_X5) | RISCVF_IMMI(slot);
++    *p++ = RISCVI_LUI | RISCVF_D(RID_X5) | RISCVF_IMMU(slot);
+     *p = RISCVI_JAL | RISCVF_IMMJ(((char *)page-(char *)p));
+     p++;
+   }
+diff --git a/src/lj_dispatch.h b/src/lj_dispatch.h
+index c794f24a..515a8dad 100644
+--- a/src/lj_dispatch.h
++++ b/src/lj_dispatch.h
+@@ -67,12 +67,24 @@ GOTDEF(GOTENUM)
+ #endif
+ 
+ #if LJ_TARGET_RISCV64
+-/* Need our own global offset table to wrap RISC-V PIC extern calls */
++/* Need our own global offset table to wrap RISC-V PIC intern / extern calls */
++
++#if LJ_HASJIT
++#define JITGOTDEF(_)	_(lj_err_trace) _(lj_trace_exit) _(lj_trace_hot)
++#else
++#define JITGOTDEF(_)
++#endif
++#define FFIGOTDEF(_) \
++  _(lj_meta_equal_cd) _(lj_ccallback_enter) _(lj_ccallback_leave)
++#else
++#define FFIGOTDEF(_)
++#endif
+ 
+ #define GOTDEF(_) \
+   _(floor) _(ceil) _(trunc) _(log) _(log10) _(exp) _(sin) _(cos) _(tan) \
+   _(asin) _(acos) _(atan) _(sinh) _(cosh) _(tanh) _(frexp) _(modf) _(atan2) \
+-  _(pow) _(fmod) _(ldexp)
++  _(pow) _(fmod) _(ldexp) \
++  JITGOTDEF(_) FFIGOTDEF(_)
+ 
+ enum {
+ #define GOTENUM(name) LJ_GOT_##name,
+diff --git a/src/vm_riscv64.dasc b/src/vm_riscv64.dasc
+index 385d41d8..56947360 100644
+--- a/src/vm_riscv64.dasc
++++ b/src/vm_riscv64.dasc
+@@ -438,8 +438,8 @@
+ |.macro load_got, func
+ |  ld CFUNCADDR, GL_GOT(func)(GL)
+ |.endmacro
+-|// JAL should be enough for internal jumps.
+-|// .macro call_intern, func; jalr CFUNCADDR; .endmacro
++|// JAL should be enough for *most* internal jumps.
++|.macro call_intern, func; jalr CFUNCADDR; .endmacro
+ |.macro call_extern; jalr CFUNCADDR; .endmacro
+ |.macro jmp_extern; jr CFUNCADDR; .endmacro
+ |
+@@ -2581,15 +2581,16 @@ static void build_subroutines(BuildCtx *ctx)
+   |//-- FFI helper functions -----------------------------------------------
+   |//-----------------------------------------------------------------------
+   |
+-  |// FIXME: BROKEN! What's the call convention here exactly?
+-  |// Handler for callback functions. Callback slot number in r19, g in r17.
++  |// Handler for callback functions. Callback slot number in x5, g in x7.
+   |->vm_ffi_callback:
+   |.if FFI
+   |.type CTSTATE, CTState, PC
+   |  saveregs
+-  |  ld CTSTATE, GL:x31->ctype_state
+-  |  addxi DISPATCH, x31, GG_G2DISP
+-  |  sw CFUNCADDR, CTSTATE->cb.slot
++  |  ld CTSTATE, GL:x7->ctype_state
++  |  addxi DISPATCH, x7, GG_G2DISP
++  |  load_got lj_ccallback_leave
++  |  srli x5, x5, 12
++  |  sw x5, CTSTATE->cb.slot
+   |  sd CARG1, CTSTATE->cb.gpr[0]
+   |  fsd FARG1, CTSTATE->cb.fpr[0]
+   |  sd CARG2, CTSTATE->cb.gpr[1]
+@@ -2611,7 +2612,7 @@ static void build_subroutines(BuildCtx *ctx)
+   |  sd x0, SAVE_PC(sp)			// Any value outside of bytecode is ok.
+   |  mv CARG1, CTSTATE
+   |  mv CARG2, sp
+-  |  jal extern lj_ccallback_enter		// (CTState *cts, void *cf)
++  |  call_intern lj_ccallback_leave	// (CTState *cts, void *cf)
+   |  // Returns lua_State *.
+   |  ld BASE, L:CRET1->base
+   |  ld RC, L:CRET1->top
+@@ -2620,23 +2621,25 @@ static void build_subroutines(BuildCtx *ctx)
+   |  ld LFUNC:RB, FRAME_FUNC(BASE)
+   |  li TISNIL, LJ_TNIL
+   |  li TISNUM, LJ_TISNUM
++  |  fmv.w.x TOBIT, TMP3
+   |  li_vmstate INTERP
+   |  subw RC, RC, BASE
+   |  cleartp LFUNC:RB
+   |  st_vmstate
+-  |  fcvt.d.w TOBIT, TMP3
++  |  fcvt.d.s TOBIT, TOBIT
+   |  ins_callt
+   |.endif
+   |
+   |->cont_ffi_callback:				// Return from FFI callback.
+   |.if FFI
++  |  load_got lj_ccallback_leave
+   |  ld CTSTATE, GL->ctype_state
+   |  sd BASE, L->base
+   |  sd RB, L->top
+   |  sd L, CTSTATE->L
+   |  mv CARG1, CTSTATE
+   |  mv CARG2, RA
+-  |  jal extern lj_ccallback_leave		// (CTState *cts, TValue *o)
++  |  call_intern lj_ccallback_leave	// (CTState *cts, TValue *o)
+   |  fld FRET1, CTSTATE->cb.fpr[0]
+   |  ld CRET1, CTSTATE->cb.gpr[0]
+   |  fld FRET2, CTSTATE->cb.fpr[1]
+-- 
+2.42.0
+

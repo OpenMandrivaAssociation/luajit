@@ -1,0 +1,30 @@
+From 993040a7f7c69c45df53097502fc8ce22c113b76 Mon Sep 17 00:00:00 2001
+From: gns <infiwang@pm.me>
+Date: Sat, 3 Jun 2023 23:43:39 +0800
+Subject: [PATCH 105/156] riscv(emit): fix emit_roti
+
+Fix 227f515 "riscv(asm): fix emit_rot(i)"
+
+This is a WIP, archive only.
+---
+ src/lj_emit_riscv.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/lj_emit_riscv.h b/src/lj_emit_riscv.h
+index 0a9ae406..1ed7161a 100644
+--- a/src/lj_emit_riscv.h
++++ b/src/lj_emit_riscv.h
+@@ -116,8 +116,8 @@ static void emit_roti(ASMState *as, RISCVIns riscvi, Reg rd, Reg rs1, int32_t sh
+         return;
+     }
+     emit_ds1s2(as, RISCVI_OR, rd, rd, RID_TMP);
+-    emit_dsshamt(as, bi, RID_TMP, rs1, (shwid - shamt)&shmsk);
+-    emit_dsshamt(as, ai, rd, rs1, shamt&shmsk);
++    emit_dsshamt(as, bi, rd, rs1, (shwid - shamt)&shmsk);
++    emit_dsshamt(as, ai, RID_TMP, rs1, shamt&shmsk);
+   }
+ }
+ 
+-- 
+2.42.0
+

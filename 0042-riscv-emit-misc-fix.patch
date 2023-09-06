@@ -1,0 +1,28 @@
+From 55fe374540d4f3772f930030829b4d089de90ca5 Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Tue, 14 Feb 2023 15:34:47 +0800
+Subject: [PATCH 042/156] riscv(emit): misc fix
+
+This is a WIP, archive only.
+---
+ src/lj_emit_riscv.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/lj_emit_riscv.h b/src/lj_emit_riscv.h
+index e4aea5c6..b4883280 100644
+--- a/src/lj_emit_riscv.h
++++ b/src/lj_emit_riscv.h
+@@ -301,8 +301,8 @@ static void emit_jmp(ASMState *as, MCode *target)
+     *--p = RISCVI_JAL | RISCVF_IMMJ(delta);
+   } else {
+     Reg cfa = ra_scratch(as, RID2RSET(RID_CFUNCADDR));
+-    *--p = RISCVI_JALR | RISCVF_S1(cfa) | RISCVF_IMMI(RISCVI_LO(delta));
+-    *--p = RISCVI_AUIPC | RISCVF_D(cfa) | RISCVF_IMMU(RISCVI_HI(delta));
++    *--p = RISCVI_JALR | RISCVF_S1(cfa) | RISCVF_IMMI(RISCVF_LO(delta));
++    *--p = RISCVI_AUIPC | RISCVF_D(cfa) | RISCVF_IMMU(RISCVF_HI(delta));
+   }
+ }
+ 
+-- 
+2.42.0
+

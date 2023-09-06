@@ -1,0 +1,76 @@
+From 2e134eee48c216c1c3cd864e7eda0663440193cc Mon Sep 17 00:00:00 2001
+From: gns <infiwang@pm.me>
+Date: Thu, 3 Aug 2023 17:01:01 +0800
+Subject: [PATCH 151/156] misc: add a proper README
+
+---
+ README    | 16 ----------------
+ README.md | 33 +++++++++++++++++++++++++++++++++
+ 2 files changed, 33 insertions(+), 16 deletions(-)
+ delete mode 100644 README
+ create mode 100644 README.md
+
+diff --git a/README b/README
+deleted file mode 100644
+index 1faef255..00000000
+--- a/README
++++ /dev/null
+@@ -1,16 +0,0 @@
+-README for LuaJIT 2.1.0-beta3
+------------------------------
+-
+-LuaJIT is a Just-In-Time (JIT) compiler for the Lua programming language.
+-
+-Project Homepage: https://luajit.org/
+-
+-LuaJIT is Copyright (C) 2005-2022 Mike Pall.
+-LuaJIT is free software, released under the MIT license.
+-See full Copyright Notice in the COPYRIGHT file or in luajit.h.
+-
+-Documentation for LuaJIT is available in HTML format.
+-Please point your favorite browser to:
+-
+- doc/luajit.html
+-
+diff --git a/README.md b/README.md
+new file mode 100644
+index 00000000..ef79ebf0
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,33 @@
++# LJRV - LuaJIT RISC-V 64 Port
++
++LuaJIT is a Just-In-Time (JIT) compiler for the Lua programming language,
++RISC-V is a free and open ISA enabling a new era of processor innovation.
++
++## Introduction
++
++LJRV is a ongoing porting project of LuaJIT to the RISC-V 64-bit architecture by PLCT Lab, ISCAS.
++The ultimate goal is to provide a RISC-V 64 LuaJIT implementation and have it upstreamed to the official LuaJIT repository.
++
++## Progress
++
++- [x] Interpreter Runtime
++  - except unwinding
++- [x] JIT Compiler
++  - table reference might be broken
++
++LJRV is still of beta quality, particularly the JIT compiler.
++For production usage, we suggests disable the JIT compiler during compilation by setting `XCFLAGS+= -DLUAJIT_DISABLE_JIT` in Makefile or environment variable.
++
++## Bug Report
++
++Please report bugs to [Issues](https://github.com/infiWang/LuaJIT-RV/issues).
++
++## Copyright
++
++LuaJIT is Copyright (C) 2005-2022 Mike Pall.
++LuaJIT is free software, released under the MIT license.
++See full Copyright Notice in the COPYRIGHT file or in luajit.h.
++
++LJRV is Copyright (C) 2022-2023 PLCT Lab, ISCAS. Contributed by gns.
++LJRV is free software, released under the MIT license.
++LJRV is part of RuyiSDK, PLCT Lab, ISCAS.
+-- 
+2.42.0
+

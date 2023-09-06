@@ -1,0 +1,35 @@
+From d612e7b84ed4cdd7efc51170b6f9b507d3c3b851 Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Wed, 22 Feb 2023 20:41:28 +0800
+Subject: [PATCH 051/156] riscv(emit): fix emit_[call,jmp]
+
+We forgot to update mc pointer after emission.
+
+This is a WIP, archive only.
+---
+ src/lj_emit_riscv.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/lj_emit_riscv.h b/src/lj_emit_riscv.h
+index 4f6d318b..71c281e9 100644
+--- a/src/lj_emit_riscv.h
++++ b/src/lj_emit_riscv.h
+@@ -311,6 +311,7 @@ static void emit_jmp(ASMState *as, MCode *target)
+     *--p = RISCVI_JALR | RISCVF_S1(cfa) | RISCVF_IMMI(RISCVF_LO(delta));
+     *--p = RISCVI_AUIPC | RISCVF_D(cfa) | RISCVF_IMMU(RISCVF_HI(delta));
+   }
++  as->mcp = p;
+ }
+ 
+ #define emit_mv(as, dst, src) \
+@@ -331,6 +332,7 @@ static void emit_call(ASMState *as, void *target, int needcfa)
+     *--p = RISCVI_JALR | RISCVF_D(RID_RA) | RISCVF_S1(RID_CFUNCADDR) | RISCVF_IMMI(0);
+     needcfa = 2;
+   }
++  as->mcp = p;
+   if (needcfa > 1)
+     ra_allockreg(as, (intptr_t)target, RID_CFUNCADDR); 
+   else if (needcfa > 0)
+-- 
+2.42.0
+

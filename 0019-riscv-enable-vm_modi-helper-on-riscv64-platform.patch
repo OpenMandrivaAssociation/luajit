@@ -1,0 +1,29 @@
+From 5daf91845854244ce02dd6b67d18948429cf296d Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Thu, 15 Dec 2022 01:34:08 +0800
+Subject: [PATCH 019/156] riscv: enable vm_modi helper on riscv64 platform
+
+Consider replacing it with asm someday?
+
+This is a WIP, archive only.
+---
+ src/lj_vmmath.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/lj_vmmath.c b/src/lj_vmmath.c
+index b6cc60ba..2186621b 100644
+--- a/src/lj_vmmath.c
++++ b/src/lj_vmmath.c
+@@ -58,7 +58,8 @@ double lj_vm_foldarith(double x, double y, int op)
+ 
+ /* -- Helper functions for generated machine code ------------------------- */
+ 
+-#if (LJ_HASJIT && !(LJ_TARGET_ARM || LJ_TARGET_ARM64 || LJ_TARGET_PPC)) || LJ_TARGET_MIPS
++#if (LJ_HASJIT && !(LJ_TARGET_ARM || LJ_TARGET_ARM64 || LJ_TARGET_PPC)) || LJ_TARGET_MIPS \
++ || LJ_TARGET_RISCV64
+ int32_t LJ_FASTCALL lj_vm_modi(int32_t a, int32_t b)
+ {
+   uint32_t y, ua, ub;
+-- 
+2.42.0
+

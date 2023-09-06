@@ -1,0 +1,29 @@
+From 2ce7886e649fd7c12a53c5a2b6c9927b04ad89e1 Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Fri, 24 Feb 2023 02:04:23 +0800
+Subject: [PATCH 060/156] riscv(interp): Fix BC_ISNEN PC calculation
+
+Fix commit "86f49db: riscv(interp): optimize branch".
+
+This is a WIP, archive only.
+---
+ src/vm_riscv64.dasc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/vm_riscv64.dasc b/src/vm_riscv64.dasc
+index fb547e90..54f3af9e 100644
+--- a/src/vm_riscv64.dasc
++++ b/src/vm_riscv64.dasc
+@@ -2822,8 +2822,8 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |  ins_next
+     |
+     |4:  // RA is not an integer.
+-    |  bgeu CARG3, TISNUM, <2
+     |    addw TMP2, TMP2, TMP3
++    |  bgeu CARG3, TISNUM, <2
+     |  fmv.d.x FTMP0, CARG1
+     |   fmv.d.x FTMP2, CARG2
+     |  bne CARG4, TISNUM, >5
+-- 
+2.42.0
+

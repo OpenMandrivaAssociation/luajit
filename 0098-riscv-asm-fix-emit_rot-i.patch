@@ -1,0 +1,117 @@
+From 227f5159da02dca1403eb24944a932ffd147c739 Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Sun, 28 May 2023 23:02:55 +0800
+Subject: [PATCH 098/156] riscv(asm): fix emit_rot(i)
+
+This is a WIP, archive only.
+---
+ src/lj_asm_riscv64.h | 10 +++++-----
+ src/lj_emit_riscv.h  | 25 +++++++++++++++----------
+ 2 files changed, 20 insertions(+), 15 deletions(-)
+
+diff --git a/src/lj_asm_riscv64.h b/src/lj_asm_riscv64.h
+index 53a98c7b..5410dd26 100644
+--- a/src/lj_asm_riscv64.h
++++ b/src/lj_asm_riscv64.h
+@@ -748,12 +748,12 @@ static void asm_href(ASMState *as, IRIns *ir, IROp merge)
+       emit_lso(as, RISCVI_LW, tmp1, key, (int32_t)offsetof(GCstr, sid));
+     } else {  /* Must match with hash*() in lj_tab.c. */
+       emit_ds1s2(as, RISCVI_SUBW, tmp1, tmp1, tmp2);
+-      emit_roti(as, RISCVI_RORIW, tmp2, tmp2, (-HASH_ROT3)&0x1f, allow);
++      emit_roti(as, RISCVI_RORIW, tmp2, tmp2, (-HASH_ROT3)&0x1f);
+       emit_ds1s2(as, RISCVI_XOR, tmp1, tmp1, tmp2);
+-      emit_roti(as, RISCVI_RORIW, tmp1, tmp1, (-HASH_ROT2-HASH_ROT1)&0x1f, allow);
++      emit_roti(as, RISCVI_RORIW, tmp1, tmp1, (-HASH_ROT2-HASH_ROT1)&0x1f);
+       emit_ds1s2(as, RISCVI_SUBW, tmp2, tmp2, dest);
+       emit_ds1s2(as, RISCVI_XOR, tmp2, tmp2, tmp1);
+-      emit_roti(as, RISCVI_RORIW, dest, tmp1, (-HASH_ROT1)&0x1f, allow);
++      emit_roti(as, RISCVI_RORIW, dest, tmp1, (-HASH_ROT1)&0x1f);
+       if (irt_isnum(kt)) {
+ 	emit_dsshamt(as, RISCVI_SLLIW, tmp1, tmp1, 1);
+ 	emit_dsshamt(as, RISCVI_SRAI, tmp1, tmp1, 32);	// hi
+@@ -1462,7 +1462,7 @@ static void asm_bitshift(ASMState *as, IRIns *ir, RISCVIns riscvi, RISCVIns risc
+         emit_dsshamt(as, riscvik, dest, left, shift);
+         break;
+       case RISCVI_RORI: case RISCVI_RORIW:
+-        emit_roti(as, riscvik, dest, left, shift, RSET_GPR);
++        emit_roti(as, riscvik, dest, left, shift);
+         break;
+       default:
+         lj_assertA(0, "bad shift instruction");
+@@ -1477,7 +1477,7 @@ static void asm_bitshift(ASMState *as, IRIns *ir, RISCVIns riscvi, RISCVIns risc
+         break;
+       case RISCVI_ROR: case RISCVI_ROL:
+       case RISCVI_RORW: case RISCVI_ROLW:
+-        emit_rot(as, riscvi, dest, left, right, RSET_GPR);
++        emit_rot(as, riscvi, dest, left, right);
+         break;
+       default:
+         lj_assertA(0, "bad shift instruction");
+diff --git a/src/lj_emit_riscv.h b/src/lj_emit_riscv.h
+index 11e9f86c..b8c1acd9 100644
+--- a/src/lj_emit_riscv.h
++++ b/src/lj_emit_riscv.h
+@@ -95,14 +95,13 @@ static void emit_lso(ASMState *as, RISCVIns riscvi, Reg data, Reg base, int32_t
+   }
+ }
+ 
+-static void emit_roti(ASMState *as, RISCVIns riscvi, Reg rd, Reg rs1, int32_t shamt, RegSet allow)
++static void emit_roti(ASMState *as, RISCVIns riscvi, Reg rd, Reg rs1, int32_t shamt)
+ {
+   if (as->flags & JIT_F_RVB) {
+     emit_dsshamt(as, riscvi, rd, rs1, shamt);
+   } else {
+     RISCVIns ai, bi;
+     int32_t shwid, shmsk;
+-    Reg tmp = ra_scratch(as, rset_exclude(allow, rd));
+     switch (riscvi) {
+       case RISCVI_RORI:
+         ai = RISCVI_SRLI, bi = RISCVI_SLLI;
+@@ -116,19 +115,18 @@ static void emit_roti(ASMState *as, RISCVIns riscvi, Reg rd, Reg rs1, int32_t sh
+         lj_assertA(0, "invalid roti op");
+         return;
+     }
+-    emit_ds1s2(as, RISCVI_OR, rd, rd, tmp);
+-    emit_dsshamt(as, bi, tmp, rs1, (shwid - shamt)&shmsk);
++    emit_ds1s2(as, RISCVI_OR, rd, rd, RID_TMP);
++    emit_dsshamt(as, bi, RID_TMP, rs1, (shwid - shamt)&shmsk);
+     emit_dsshamt(as, ai, rd, rs1, shamt&shmsk);
+   }
+ }
+ 
+-static void emit_rot(ASMState *as, RISCVIns riscvi, Reg rd, Reg rs1, Reg rs2, RegSet allow)
++static void emit_rot(ASMState *as, RISCVIns riscvi, Reg rd, Reg rs1, Reg rs2)
+ {
+   if (as->flags & JIT_F_RVB) {
+     emit_ds1s2(as, riscvi, rd, rs1, rs2);
+   } else {
+     RISCVIns sai, sbi;
+-    Reg tmp = ra_scratch(as, rset_exclude(allow, rd));
+     switch (riscvi) {
+       case RISCVI_ROL:
+         sai = RISCVI_SLL, sbi = RISCVI_SRL;
+@@ -146,10 +144,17 @@ static void emit_rot(ASMState *as, RISCVIns riscvi, Reg rd, Reg rs1, Reg rs2, Re
+         lj_assertA(0, "invalid rot op");
+         return;
+     }
+-    emit_ds1s2(as, RISCVI_OR, rd, rd, tmp);
+-    emit_ds1s2(as, sbi, rd, rs1, rd);
+-    emit_ds1s2(as, sai, tmp, rs1, rs2);
+-    emit_ds2(as, RISCVI_NEG, rd, rs2);
++    if (rd == rs2) {
++      emit_ds1s2(as, RISCVI_OR, rd, rd, RID_TMP);
++      emit_ds1s2(as, sbi, RID_TMP, rs1, RID_TMP);
++      emit_ds1s2(as, sai, rd, rs1, rs2);
++      emit_ds2(as, RISCVI_NEG, RID_TMP, rs2);
++    } else {
++      emit_ds1s2(as, RISCVI_OR, rd, rd, RID_TMP);
++      emit_ds1s2(as, sbi, rd, rs1, rd);
++      emit_ds1s2(as, sai, RID_TMP, rs1, rs2);
++      emit_ds2(as, RISCVI_NEG, rd, rs2);
++    }
+   }
+ }
+ 
+-- 
+2.42.0
+

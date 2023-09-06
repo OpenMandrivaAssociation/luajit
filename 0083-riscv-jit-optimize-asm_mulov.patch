@@ -1,0 +1,34 @@
+From d6e76b1b5f82824abd069cd441591948474285e1 Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Sun, 16 Apr 2023 15:02:03 +0800
+Subject: [PATCH 083/156] riscv(jit): optimize asm_mulov
+
+MULW should technically be the same as MUL+SEXT.W (?)
+Looks good with arith test, hopefully didn't miss anything.
+
+This is a WIP, archive only.
+---
+ src/lj_asm_riscv64.h | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/lj_asm_riscv64.h b/src/lj_asm_riscv64.h
+index a5da2c7f..2686c1c8 100644
+--- a/src/lj_asm_riscv64.h
++++ b/src/lj_asm_riscv64.h
+@@ -1367,10 +1367,10 @@ static void asm_mulov(ASMState *as, IRIns *ir)
+   tmp2 = ra_scratch(as, RSET_GPR &  ~(RID2RSET(left)|RID2RSET(right)
+                                      |RID2RSET(dest)|RID2RSET(tmp1)));
+   asm_guard(as, RISCVI_BNE, tmp1, tmp2);
+-  emit_dsshamt(as, RISCVI_SRAIW, tmp2, dest, 31);
+   emit_dsshamt(as, RISCVI_SRAI, tmp1, tmp1, 32);	// tmp1: [63:32]
+-  emit_ds1s2(as, RISCVI_MULW, dest, left, right);	// dest: [31:0]+signextend
+-  emit_ds1s2(as, RISCVI_MUL, tmp1, left, right);	// tmp1: [63:0]?
++  emit_dsshamt(as, RISCVI_SRAIW, tmp2, tmp1, 31);
++  emit_ext(as, RISCVI_SEXT_W, dest, tmp1);	// dest: [31:0]+signextend
++  emit_ds1s2(as, RISCVI_MUL, tmp1, left, right);	// tmp1: [63:0]
+ }
+ 
+ static void asm_bnot(ASMState *as, IRIns *ir)
+-- 
+2.42.0
+

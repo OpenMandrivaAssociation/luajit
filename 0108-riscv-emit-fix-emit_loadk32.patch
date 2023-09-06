@@ -1,0 +1,29 @@
+From 12c8650234b321f22434e50c8ab1eba5a77643f4 Mon Sep 17 00:00:00 2001
+From: gns <infiwang@pm.me>
+Date: Tue, 6 Jun 2023 16:49:37 +0800
+Subject: [PATCH 108/156] riscv(emit): fix emit_loadk32
+
+Expected corner case 0x80000 is signed here.
+With i being int32_t with arithmetic right shift, RISCVF_HI(i) could never be equal to 0x80000.
+
+This is a WIP, archive only.
+---
+ src/lj_emit_riscv.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/lj_emit_riscv.h b/src/lj_emit_riscv.h
+index 1ed7161a..fcf97d03 100644
+--- a/src/lj_emit_riscv.h
++++ b/src/lj_emit_riscv.h
+@@ -211,7 +211,7 @@ static void emit_loadk32(ASMState *as, Reg rd, int32_t i)
+   if (checki12(i)) {
+     emit_loadk12(as, rd, i);
+   } else {
+-    if(LJ_UNLIKELY(RISCVF_HI(i) == 0x80000 && i > 0))
++    if(LJ_UNLIKELY(RISCVF_HI((uint32_t)i) == 0x80000u && i > 0))
+       emit_dsi(as, RISCVI_XORI, rd, rd, RISCVF_LO(i));
+     else
+     emit_dsi(as, RISCVI_ADDI, rd, rd, RISCVF_LO(i));
+-- 
+2.42.0
+

@@ -1,0 +1,37 @@
+From 1e04a58a3811cb188f70fc5484e1182cb234ef95 Mon Sep 17 00:00:00 2001
+From: gns <infiwang@pm.me>
+Date: Fri, 23 Jun 2023 14:43:45 +0800
+Subject: [PATCH 122/156] riscv(arch): set free JIT & FFI
+
+This is a WIP, archive only.
+---
+ src/lj_arch.h | 6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/src/lj_arch.h b/src/lj_arch.h
+index d6e54018..453414f3 100644
+--- a/src/lj_arch.h
++++ b/src/lj_arch.h
+@@ -454,17 +454,15 @@
+ #define LJ_ARCH_ENDIAN		LUAJIT_LE	/* Forget about BE for now */
+ #define LJ_TARGET_RISCV64	1
+ #define LJ_TARGET_GC64		1
+-#define LJ_TARGET_EHRETREG	0
++#define LJ_TARGET_EHRETREG	0 // TODO
+ #define LJ_TARGET_EHRAREG	1
+ #define LJ_TARGET_JUMPRANGE	30	/* JAL +-2^20 = +-1MB,\
+         AUIPC+JALR +-2^31 = +-2GB, leave 1 bit to avoid AUIPC corner case */
+ #define LJ_TARGET_MASKSHIFT	1
+ #define LJ_TARGET_MASKROT	1
+-#define LJ_TARGET_UNIFYROT	2	/* Want only IR_BROR. */
++#define LJ_TARGET_UNIFYROT	2	/* Want only IR_BROR, no ROLI */
+ #define LJ_ARCH_NUMMODE		LJ_NUMMODE_DUAL
+ // for now
+-#define LUAJIT_DISABLE_JIT	1 // JIT WIP
+-// #define LUAJIT_DISABLE_FFI	1 // JIT+FFI does not play well yet
+ #define LUAJIT_NO_UNWIND	1
+ 
+ #else
+-- 
+2.42.0
+

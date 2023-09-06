@@ -1,0 +1,31 @@
+From 6aff87dba247b19d1b19ba28acb8fbe75b1e0b6a Mon Sep 17 00:00:00 2001
+From: gns <infiwang@pm.me>
+Date: Fri, 23 Jun 2023 02:43:52 +0800
+Subject: [PATCH 117/156] riscv(asm): fix asm_tointg
+
+LuaJIT-test/test/test.lua w/JIT w/o FFI fail 3.
+2022.08 - 2023.06
+
+Maybe we can utilize RID_TMP?
+
+This is a WIP, archive only.
+---
+ src/lj_asm_riscv64.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/lj_asm_riscv64.h b/src/lj_asm_riscv64.h
+index dddafc44..f8f6190e 100644
+--- a/src/lj_asm_riscv64.h
++++ b/src/lj_asm_riscv64.h
+@@ -432,7 +432,7 @@ static void asm_bufhdr_write(ASMState *as, Reg sb)
+ static void asm_tointg(ASMState *as, IRIns *ir, Reg left)
+ {
+   Reg tmp = ra_scratch(as, rset_exclude(RSET_FPR, left));
+-  Reg dest = ra_dest(as, ir, RSET_GPR), cmp = ra_scratch(as, RSET_GPR);
++  Reg dest = ra_dest(as, ir, RSET_GPR), cmp = ra_scratch(as, rset_exclude(RSET_GPR, dest));
+   asm_guard(as, RISCVI_BEQ, cmp, RID_ZERO);
+   emit_ds1s2(as, RISCVI_FEQ_D, cmp, tmp, left);
+   emit_ds(as, RISCVI_FCVT_D_W, tmp, dest);
+-- 
+2.42.0
+

@@ -1,0 +1,48 @@
+From 7d0a4524436bff7058b8ef22f08f3ad04026e39b Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Thu, 4 May 2023 11:44:59 +0800
+Subject: [PATCH 097/156] riscv(emit): fix emit_call
+
+Prevents unintended cfa usage.
+
+Side note:
+Should be viable to manually allocate and mark properly, but what about evict?
+Could calculate k ourself (actually its target!) and prevents fill-in, hacky(?)
+Or ditch AUIPC+JALR? It provides significant instruction count reduction.
+Using RID_TMP(RID_RA) might be easier, though not friendly to RAS predictor. t0
+is also not the best choice for the same reason.
+
+This is a WIP, archive only.
+---
+ src/lj_emit_riscv.h | 8 +++-----
+ 1 file changed, 3 insertions(+), 5 deletions(-)
+
+diff --git a/src/lj_emit_riscv.h b/src/lj_emit_riscv.h
+index a417a6c5..11e9f86c 100644
+--- a/src/lj_emit_riscv.h
++++ b/src/lj_emit_riscv.h
+@@ -324,8 +324,8 @@ static void emit_call(ASMState *as, void *target, int needcfa)
+     *--p = RISCVI_NOP;
+     *--p = RISCVI_JAL | RISCVF_D(RID_RA) | RISCVF_IMMJ(delta);
+   } else if (checki32(delta)) {
+-    *--p = RISCVI_JALR | RISCVF_D(RID_RA) | RISCVF_S1(RID_CFUNCADDR) | RISCVF_IMMI(RISCVF_LO(delta));
+-    *--p = RISCVI_AUIPC | RISCVF_D(RID_CFUNCADDR) | RISCVF_IMMU(RISCVF_HI(delta));
++    *--p = RISCVI_JALR | RISCVF_D(RID_RA) | RISCVF_S1(RID_TMP) | RISCVF_IMMI(RISCVF_LO(delta));
++    *--p = RISCVI_AUIPC | RISCVF_D(RID_TMP) | RISCVF_IMMU(RISCVF_HI(delta));
+     needcfa = 1;
+   } else {
+     *--p = RISCVI_JALR | RISCVF_D(RID_RA) | RISCVF_S1(RID_CFUNCADDR) | RISCVF_IMMI(0);
+@@ -333,9 +333,7 @@ static void emit_call(ASMState *as, void *target, int needcfa)
+   }
+   as->mcp = p;
+   if (needcfa > 1)
+-    ra_allockreg(as, (intptr_t)target, RID_CFUNCADDR); 
+-  else if (needcfa > 0)
+-    ra_scratch(as, RID2RSET(RID_CFUNCADDR));
++    ra_allockreg(as, (intptr_t)target, RID_CFUNCADDR);
+ }
+ 
+ /* -- Emit generic operations --------------------------------------------- */
+-- 
+2.42.0
+

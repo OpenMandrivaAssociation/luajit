@@ -1,0 +1,79 @@
+From be9cc00b1cf95493765ca740f551326223fe0ae9 Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Wed, 14 Dec 2022 00:24:11 +0800
+Subject: [PATCH 017/156] dynasm: riscv: refactor orderedPairs
+
+Kudos to Lua-User Wiki.
+---
+ dynasm/dasm_riscv.lua | 22 ++++++----------------
+ 1 file changed, 6 insertions(+), 16 deletions(-)
+
+diff --git a/dynasm/dasm_riscv.lua b/dynasm/dasm_riscv.lua
+index 92a1156a..b4501a5a 100644
+--- a/dynasm/dasm_riscv.lua
++++ b/dynasm/dasm_riscv.lua
+@@ -33,28 +33,21 @@ local bit = bit or require("bit")
+ local band, shl, shr, sar = bit.band, bit.lshift, bit.rshift, bit.arshift
+ local tohex = bit.tohex
+ 
+-local function __orderedGenIndex( t )
++local function __orderedIndexGen(t)
+     local orderedIndex = {}
+     for key in pairs(t) do
+-        table.insert( orderedIndex, key )
++        table.insert(orderedIndex, key)
+     end
+     table.sort( orderedIndex )
+     return orderedIndex
+ end
+ 
+ local function __orderedNext(t, state)
+-    -- Equivalent of the next function, but returns the keys in the alphabetic
+-    -- order. We use a temporary ordered key table that is stored in the
+-    -- table being iterated.
+-
+     local key = nil
+-    --print("orderedNext: state = "..tostring(state) )
+     if state == nil then
+-        -- the first time, generate the index
+-        t.__orderedIndex = __orderedGenIndex( t )
++        t.__orderedIndex = __orderedIndexGen(t)
+         key = t.__orderedIndex[1]
+     else
+-        -- fetch the next value
+         local j = 0
+         for _,_ in pairs(t.__orderedIndex) do j = j + 1 end
+         for i = 1, j do
+@@ -68,14 +61,11 @@ local function __orderedNext(t, state)
+         return key, t[key]
+     end
+ 
+-    -- no more value to return, cleanup
+     t.__orderedIndex = nil
+     return
+ end
+ 
+-local function orderedPairs(t)
+-    -- Equivalent of the pairs() function on tables. Allows to iterate
+-    -- in order
++local function opairs(t)
+     return __orderedNext, t, nil
+ end
+ 
+@@ -586,11 +576,11 @@ local map_op_zifencei = {
+ local list_map_op_rv32 = { ['a'] = map_op_rv32imafd, ['b'] = map_op_zifencei, ['c'] = map_op_zicsr }
+ local list_map_op_rv64 = { ['a'] = map_op_rv32imafd, ['b'] = map_op_rv64imafd, ['c'] = map_op_zifencei, ['d'] = map_op_zicsr }
+ 
+-if riscv32 then for _, map in orderedPairs(list_map_op_rv32) do
++if riscv32 then for _, map in opairs(list_map_op_rv32) do
+   for k, v in pairs(map) do map_op[k] = v end
+   end
+ end
+-if riscv64 then for _, map in orderedPairs(list_map_op_rv64) do
++if riscv64 then for _, map in opairs(list_map_op_rv64) do
+   for k, v in pairs(map) do map_op[k] = v end
+   end
+ end
+-- 
+2.42.0
+

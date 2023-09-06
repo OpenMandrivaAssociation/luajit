@@ -1,0 +1,43 @@
+From 708c30c75e8074e95f37be71496293f3ab630af8 Mon Sep 17 00:00:00 2001
+From: Raymond Wong <infiwang@pm.me>
+Date: Tue, 18 Apr 2023 17:42:33 +0800
+Subject: [PATCH 087/156] riscv(jit): fix asm_min_max with integer
+
+This is a WIP, archive only.
+---
+ src/lj_asm_riscv64.h | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/src/lj_asm_riscv64.h b/src/lj_asm_riscv64.h
+index 74d03ee5..cdd1b992 100644
+--- a/src/lj_asm_riscv64.h
++++ b/src/lj_asm_riscv64.h
+@@ -1514,19 +1514,19 @@ static void asm_min_max(ASMState *as, IRIns *ir, int ismax)
+     if (as->flags & JIT_F_RVB) {
+       emit_ds1s2(as, ismax ? RISCVI_MAX : RISCVI_MIN, dest, left, right);
+     } else {
+-      emit_ds1s2(as, RISCVI_OR, dest, dest, RID_TMP);
++      emit_ds1s2(as, RISCVI_OR, dest, dest, RID_TMP); 
+       if (dest != right) {
+-  emit_ds1s2(as, RISCVI_AND, RID_TMP, RID_TMP, left);
++  emit_ds1s2(as, RISCVI_AND, RID_TMP, RID_TMP,right); 
+   emit_ds(as, RISCVI_NOT, RID_TMP, RID_TMP);
+-  emit_ds1s2(as, RISCVI_AND, dest, right, RID_TMP);
++  emit_ds1s2(as, RISCVI_AND, dest, left, RID_TMP);
+       } else {
+-  emit_ds1s2(as, RISCVI_AND, RID_TMP, RID_TMP, right);
++  emit_ds1s2(as, RISCVI_AND, RID_TMP, RID_TMP, left); 
+   emit_ds(as, RISCVI_NOT, RID_TMP, RID_TMP);
+-  emit_ds1s2(as, RISCVI_AND, dest, left, RID_TMP);
++  emit_ds1s2(as, RISCVI_AND, dest, right, RID_TMP);
+       }
+       emit_ds2(as, RISCVI_NEG, RID_TMP, RID_TMP);
+       emit_ds1s2(as, RISCVI_SLT, RID_TMP,
+-	       ismax ? left : right, ismax ? right : left);
++         ismax ? right : left, ismax ? left : right);
+     }
+   }
+ }
+-- 
+2.42.0
+
