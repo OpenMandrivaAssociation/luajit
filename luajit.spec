@@ -30,7 +30,7 @@ Release:	1
 Summary:	Just-In-Time Compiler for the Lua programming language
 Group:		Development/Other
 License:	MIT
-Url:		http://luajit.org/luajit.html
+Url:		https://luajit.org/luajit.html
 Source0:	https://github.com/LuaJIT/LuaJIT/archive/refs/heads/v%{mmajor}.tar.gz
 Patch0:		luajit-2.1.0-no-Lusrlib.patch
 # RISC-V support patches based on the git repository at
