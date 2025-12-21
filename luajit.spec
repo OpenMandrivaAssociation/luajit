@@ -198,6 +198,7 @@ Patch1154:	0155-DynASM-riscv64-Fix-warnings.patch
 Patch1155:	0156-riscv64-asm-fix-asm_bswap-scratch-register-list.patch
 Requires:	%{libcommon} = %{version}-%{release}
 
+BuildRequires:	make
 %description
 LuaJIT has been successfully used as a scripting middle-ware in games,
 3D modelers, numerical simulations, trading platforms and many other
