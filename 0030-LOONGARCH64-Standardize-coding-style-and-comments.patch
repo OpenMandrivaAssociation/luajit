@@ -1,0 +1,1409 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: huangqiqi <huangqiqi@loongson.cn>
+Date: Thu, 17 Oct 2024 17:24:01 +0800
+Subject: [PATCH 30/91] LOONGARCH64: Standardize coding style and comments
+
+---
+ src/jit/dis_loongarch64.lua |  50 ++++----
+ src/lj_asm_loongarch64.h    | 227 ++++++++++++++++--------------------
+ src/lj_emit_loongarch64.h   |  48 ++++----
+ src/lj_target_loongarch64.h |   6 +-
+ src/vm_loongarch64.dasc     | 127 ++++++++++----------
+ 5 files changed, 213 insertions(+), 245 deletions(-)
+
+diff --git a/src/jit/dis_loongarch64.lua b/src/jit/dis_loongarch64.lua
+index fde3a10b..4d104cd0 100644
+--- a/src/jit/dis_loongarch64.lua
++++ b/src/jit/dis_loongarch64.lua
+@@ -23,7 +23,7 @@ local lshift, rshift, arshift = bit.lshift, bit.rshift, bit.arshift
+ -- Opcode maps
+ ------------------------------------------------------------------------------
+ 
+-local map_18_0 = {      -- 18-20:0, 10-17
++local map_18_0 = { -- 18-20:0, 10-17
+   shift = 10, mask = 255,
+   [4] = "clo.wDJ",
+   [5] = "clz.wDJ",
+@@ -47,7 +47,7 @@ local map_18_0 = {      -- 18-20:0, 10-17
+   [23] = "ext.w.bDJ",
+ }
+ 
+-local map_18_4 = {	-- 18-20:4, 15-17
++local map_18_4 = { -- 18-20:4, 15-17
+   shift = 15, mask = 7,
+   [0] = "add.wDJK",
+   [1] = "add.dDJK",
+@@ -59,7 +59,7 @@ local map_18_4 = {	-- 18-20:4, 15-17
+   [7] = "masknezDJK",
+ }
+ 
+-local map_18_5 = {	-- 18-20:5, 15-17
++local map_18_5 = { -- 18-20:5, 15-17
+   shift = 15, mask = 7,
+   [0] = "norDJK",
+   [1] = "andDJK",
+@@ -71,7 +71,7 @@ local map_18_5 = {	-- 18-20:5, 15-17
+   [7] = "srl.wDJK",
+ }
+ 
+-local map_18_6 = {	-- 18-20:6, 15-17
++local map_18_6 = { -- 18-20:6, 15-17
+   shift = 15, mask = 7,
+   [0] = "sra.wDJK",
+   [1] = "sll.dDJK",
+@@ -81,7 +81,7 @@ local map_18_6 = {	-- 18-20:6, 15-17
+   [7] = "rotr.dDJK",
+ }
+ 
+-local map_18_7 = {	-- 18-20:7, 15-17
++local map_18_7 = { -- 18-20:7, 15-17
+   shift = 15, mask = 7,
+   [0] = "mul.wDJK",
+   [1] = "mulh.wDJK",
+@@ -184,7 +184,7 @@ local map_fconvert5 = { -- 15-20: 111100
+   [18] = "frint.dFG",
+ }
+ 
+-local map_farith = {	-- 22-25:4, 15-21
++local map_farith = { -- 22-25:4, 15-21
+   shift = 15, mask = 127,
+   [1] = "fadd.sFGH",
+   [2] = "fadd.dFGH",
+@@ -212,7 +212,7 @@ local map_farith = {	-- 22-25:4, 15-21
+   [58] = map_fconvert4, [60] = map_fconvert5,
+ }
+ 
+-local map_21_0 = {	--21st:0, 18-20
++local map_21_0 = { --21st:0, 18-20
+   shift = 18, mask = 7,
+   [0] = map_18_0,
+   [1] = { shift = 17, mask = 1, [0] = "alsl.wDJKQ", "alsl.wuDJKQ", },
+@@ -224,7 +224,7 @@ local map_21_0 = {	--21st:0, 18-20
+   [7] = map_18_7,
+ }
+ 
+-local map_21_1 = {      --21st:1, 22nd:0, 15-20
++local map_21_1 = { --21st:1, 22nd:0, 15-20
+   shift = 21, mask = 1,
+   [1] = {
+     shift = 18, mask = 7,
+@@ -264,7 +264,7 @@ local map_22_0 = {
+   [1] = map_21_1,
+ }
+ 
+-local map_shift = {	-- 22nd:1, 21st:0
++local map_shift = { -- 22nd:1, 21st:0
+   shift = 16, mask = 31,
+   [0] = { shift = 15, mask = 1, [1] = "slli.wDJU", },
+   [1] = "slli.dDJV",
+@@ -276,7 +276,7 @@ local map_shift = {	-- 22nd:1, 21st:0
+   [13] = "rotri.dDJV",
+ }
+ 
+-local map_22_1 = {        -- 22nd:1
++local map_22_1 = { -- 22nd:1
+   shift = 21, mask = 1,
+   [0] = map_shift,
+   [1] = { shift = 15, mask = 1, [0] = "bstrins.wDJMU", [1] = "bstrpick.wDJMU", },
+@@ -570,40 +570,40 @@ local function disass_ins(ctx)
+       x = "fcc"..band(rshift(op, 5), 7)
+     elseif p == "I" then
+       x = "fcc"..band(rshift(op, 15), 7)
+-    elseif p == "Q" then	-- sa2
++    elseif p == "Q" then -- sa2
+       x = band(rshift(op, 15), 3)
+       ctx.rel = x
+       x = format("%d", x)
+-    elseif p == "B" then	-- sa3
++    elseif p == "B" then -- sa3
+       x = band(rshift(op, 15), 7)
+       ctx.rel = x
+       x = format("%d", x)
+-    elseif p == "M" then	-- msbw
++    elseif p == "M" then -- msbw
+       x = band(rshift(op, 16), 31)
+       ctx.rel = x
+       x = format("%d(0x%x)", x, x)
+-    elseif p == "N" then	-- msbd
++    elseif p == "N" then -- msbd
+       x = band(rshift(op, 16), 63)
+       ctx.rel = x
+       x = format("%d(0x%x)", x, x)
+-    elseif p == "U" then	-- ui5
++    elseif p == "U" then -- ui5
+       x = band(rshift(op, 10), 31)
+       ctx.rel = x
+       x = format("%d(0x%x)", x, x)
+-    elseif p == "V" then	-- ui6
++    elseif p == "V" then -- ui6
+       x = band(rshift(op, 10), 63)
+       ctx.rel = x
+       x = format("%d(0x%x)", x, x)
+-    elseif p == "T" then	-- ui12
++    elseif p == "T" then -- ui12
+       x = band(rshift(op, 10), 4095)
+       ctx.rel = x
+       x = format("%d(0x%x)", x, x)
+-    elseif p == "W" then	-- si14
++    elseif p == "W" then -- si14
+       x = band(rshift(op, 10), 16383)
+       x = decode_si_imm(x, 14, 0, true, 0x3fff)
+       ctx.rel = x
+       x = format("%d(0x%04x)", x, band(x, 0x3fff))
+-    elseif p == "X" then	-- si12
++    elseif p == "X" then -- si12
+       x = band(rshift(op, 10), 4095)
+       x = decode_si_imm(x, 12, 0, true, 0xfff)
+       ctx.rel = x
+@@ -611,29 +611,29 @@ local function disass_ins(ctx)
+     elseif p == "o" then
+       local disp = band((rshift(op, 10)), 0xfff)
+       operands[#operands] = format("%s, %d", last, disp)
+-    elseif p == "Y" then	-- si16
++    elseif p == "Y" then -- si16
+       x = band(rshift(op, 10), 65535)
+       x = decode_si_imm(x, 16, 0, true, 0xffff)
+       ctx.rel = x
+       x = format("%d(0x%04x)", x, band(x, 0xffff))
+-    elseif p == "Z" then	-- si20
++    elseif p == "Z" then -- si20
+       x = band(rshift(op, 10), 1048575)
+       x = decode_si_imm(x, 20, 0, true, 0xfffff)
+       ctx.rel = x
+       x = format("%d(0x%05x)", x, band(x, 0xfffff))
+-    elseif p == "C" then	-- code
++    elseif p == "C" then -- code
+       x = band(rshift(op, 0), 32767)
+-    elseif p == "O" then	-- offs[15:0]
++    elseif p == "O" then -- offs[15:0]
+       x = band(rshift(op, 10), 65535)
+       x = decode_si_imm(x, 16, 0, true, 0xffff)
+       ctx.rel = x
+       x = format("%d(0x%04x)", x, band(x, 0xffff))
+-    elseif p == "L" then	-- offs[15:0] + offs[20:16]
++    elseif p == "L" then -- offs[15:0] + offs[20:16]
+       x = lshift(band(op, 31), 16) + band(rshift(op, 10), 65535)
+       x = decode_si_imm(x, 21, 0, true, 0x1fffff)
+       ctx.rel = x
+       x = format("%d(0x%06x)", x, band(x, 0x1fffff))
+-    elseif p == "P" then	-- offs[15:0] + offs[25:16]
++    elseif p == "P" then -- offs[15:0] + offs[25:16]
+       x = lshift(band(op, 1023), 16) + band(rshift(op, 10), 65535)
+       x = decode_si_imm(x, 26, 0, true, 0x3ffffff)
+       ctx.rel = x
+diff --git a/src/lj_asm_loongarch64.h b/src/lj_asm_loongarch64.h
+index 63be35f5..8fc02471 100644
+--- a/src/lj_asm_loongarch64.h
++++ b/src/lj_asm_loongarch64.h
+@@ -88,8 +88,8 @@ static void asm_guard(ASMState *as, LOONGIns loongi, Reg rj, Reg rd)
+     loongi = loongi ^ ((loongi>>28) == 4 ? 0x00000100u : 0x04000000u);  /* Invert cond. BEQ BNE BGE BLZ*/
+     target = p - 1;  /* Patch target later in asm_loop_fixup. */
+   }
+-    emit_branch(as, loongi, rj, rd, target);
+-    emit_dji(as, LOONGI_ADDI_D, RID_TMP, RID_ZERO, as->snapno);
++  emit_branch(as, loongi, rj, rd, target);
++  emit_dji(as, LOONGI_ADDI_D, RID_TMP, RID_ZERO, as->snapno);
+ }
+ 
+ static void asm_guard21(ASMState *as, LOONGIns loongi, Reg rj)
+@@ -103,8 +103,8 @@ static void asm_guard21(ASMState *as, LOONGIns loongi, Reg rj)
+     loongi = loongi ^ ((loongi>>28) == 4 ? 0x00000100u : 0x04000000u);  /* Invert cond. BCEQZ BCNEZ*/
+     target = p - 1;  /* Patch target later in asm_loop_fixup. */
+   }
+-    emit_branch21(as, loongi, rj, target);
+-    emit_dji(as, LOONGI_ADDI_D, RID_TMP, RID_ZERO, as->snapno);
++  emit_branch21(as, loongi, rj, target);
++  emit_dji(as, LOONGI_ADDI_D, RID_TMP, RID_ZERO, as->snapno);
+ }
+ 
+ /* -- Operand fusion ------------------------------------------------------ */
+@@ -129,8 +129,7 @@ static int noconflict(ASMState *as, IRRef ref, IROp conflict)
+ static int32_t asm_fuseabase(ASMState *as, IRRef ref)
+ {
+   IRIns *ir = IR(ref);
+-  if (ir->o == IR_TNEW && ir->op1 <= LJ_MAX_COLOSIZE &&
+-      !neverfuse(as) && noconflict(as, ref, IR_NEWREF))
++  if (ir->o == IR_TNEW && ir->op1 <= LJ_MAX_COLOSIZE && !neverfuse(as) && noconflict(as, ref, IR_NEWREF))
+     return (int32_t)sizeof(GCtab);
+   return 0;
+ }
+@@ -192,8 +191,7 @@ static void asm_fusexref(ASMState *as, LOONGIns loongi, Reg rd, IRRef ref,
+   if (ra_noreg(ir->r) && canfuse(as, ir)) {
+     intptr_t ofs2;
+     if (ir->o == IR_ADD) {
+-      if (irref_isk(ir->op2) && (ofs2 = ofs + get_kval(as, ir->op2),
+-				 checki12(ofs2))) {
++      if (irref_isk(ir->op2) && (ofs2 = ofs + get_kval(as, ir->op2), checki12(ofs2))) {
+ 	ref = ir->op1;
+ 	ofs = (int32_t)ofs2;
+       }
+@@ -224,14 +222,12 @@ static void asm_fusexref(ASMState *as, LOONGIns loongi, Reg rd, IRRef ref,
+ }
+ 
+ /* Fuse FP multiply-add/sub. */
+-
+ static int asm_fusemadd(ASMState *as, IRIns *ir, LOONGIns loongi, LOONGIns loongir)
+ {
+   IRRef lref = ir->op1, rref = ir->op2;
+   IRIns *irm;
+   if (lref != rref &&
+-      ((mayfuse(as, lref) && (irm = IR(lref), irm->o == IR_MUL) &&
+-       ra_noreg(irm->r)) ||
++      ((mayfuse(as, lref) && (irm = IR(lref), irm->o == IR_MUL) && ra_noreg(irm->r)) ||
+        (mayfuse(as, rref) && (irm = IR(rref), irm->o == IR_MUL) &&
+        (rref = lref, loongi = loongir, ra_noreg(irm->r))))) {
+     Reg dest = ra_dest(as, ir, RSET_FPR);
+@@ -345,8 +341,8 @@ static void asm_callround(ASMState *as, IRIns *ir, IRCallID id)
+ {
+   /* The modified regs must match with the *.dasc implementation. */
+   RegSet drop = RID2RSET(RID_R12)|RID2RSET(RID_R13)|RID2RSET(RID_F0)|
+-		RID2RSET(RID_F4)|RID2RSET(RID_F9)|RID2RSET(RID_F22)
+-		|RID2RSET(RID_F23);
++		RID2RSET(RID_F4)|RID2RSET(RID_F9)|RID2RSET(RID_F22)|
++		RID2RSET(RID_F23);
+   if (ra_hasreg(ir->r)) rset_clear(drop, ir->r);
+   ra_evictset(as, drop);
+   ra_destreg(as, ir, RID_FPRET);
+@@ -361,7 +357,7 @@ static void asm_retf(ASMState *as, IRIns *ir)
+ {
+   Reg base = ra_alloc1(as, REF_BASE, RSET_GPR);
+   void *pc = ir_kptr(IR(ir->op2));
+-  int32_t delta = 1+LJ_FR2+bc_a(*((const BCIns *)pc - 1));
++  int32_t delta = 1 + LJ_FR2 + bc_a(*((const BCIns *)pc - 1));
+   as->topslot -= (BCReg)delta;
+   if ((int32_t)as->topslot < 0) as->topslot = 0;
+   irt_setmark(IR(REF_BASE)->t);  /* Children must not coalesce with BASE reg. */
+@@ -382,8 +378,7 @@ static void asm_bufhdr_write(ASMState *as, Reg sb)
+   IRIns irgc;
+   irgc.ot = IRT(0, IRT_PGC);  /* GC type. */
+   emit_storeofs(as, &irgc, RID_TMP, sb, offsetof(SBuf, L));
+-  emit_djml(as, LOONGI_BSTRINS_D, RID_TMP, tmp,
+-            lj_fls(SBUF_MASK_FLAG), 0);
++  emit_djml(as, LOONGI_BSTRINS_D, RID_TMP, tmp, lj_fls(SBUF_MASK_FLAG), 0);
+   emit_getgl(as, RID_TMP, cur_L);
+   emit_loadofs(as, &irgc, tmp, sb, offsetof(SBuf, L));
+ }
+@@ -415,7 +410,7 @@ static void asm_tobit(ASMState *as, IRIns *ir)
+ 
+ static void asm_conv(ASMState *as, IRIns *ir)
+ {
+-  IRType st = (IRType)(ir->op2 & IRCONV_SRCMASK);	// source type
++  IRType st = (IRType)(ir->op2 & IRCONV_SRCMASK);
+   int stfp = (st == IRT_NUM || st == IRT_FLOAT);
+   int st64 = (st == IRT_I64 || st == IRT_U64 || st == IRT_P64);
+   IRRef lref = ir->op1;
+@@ -441,8 +436,7 @@ static void asm_conv(ASMState *as, IRIns *ir)
+       /* Must perform arithmetic with doubles to keep the precision. */
+       emit_djk(as, LOONGI_FADD_D, ftmp, ftmp, tmp);
+       emit_dj(as, LOONGI_FFINT_D_W, ftmp, ftmp);
+-      emit_lsptr(as, LOONGI_FLD_D, (tmp & 0x1f),
+-		 (void *)&as->J->k64[LJ_K64_2P31], RSET_GPR);
++      emit_lsptr(as, LOONGI_FLD_D, (tmp & 0x1f), (void *)&as->J->k64[LJ_K64_2P31], RSET_GPR);
+       emit_dj(as, LOONGI_MOVGR2FR_W, ftmp, RID_TMP);
+       emit_djk(as, LOONGI_XOR, RID_TMP, RID_TMP, left);
+       emit_dji(as, LOONGI_ADDU16I_D, RID_TMP, RID_R0, 0x8000);
+@@ -491,8 +485,7 @@ static void asm_conv(ASMState *as, IRIns *ir)
+       /* Must perform arithmetic with doubles to keep the precision. */
+       emit_djk(as, LOONGI_FADD_D, dest, dest, tmp);
+       emit_dj(as, LOONGI_FFINT_D_W, dest, dest);
+-      emit_lsptr(as, LOONGI_FLD_D, (tmp & 0x1f),
+-		 (void *)&as->J->k64[LJ_K64_2P31], RSET_GPR);
++      emit_lsptr(as, LOONGI_FLD_D, (tmp & 0x1f), (void *)&as->J->k64[LJ_K64_2P31], RSET_GPR);
+       emit_dj(as, LOONGI_MOVGR2FR_W, dest, RID_TMP);
+       emit_djk(as, LOONGI_XOR, RID_TMP, RID_TMP, left);
+       emit_dji(as, LOONGI_ADDU16I_D, RID_TMP, RID_R0, 0x8000);
+@@ -527,8 +520,7 @@ static void asm_conv(ASMState *as, IRIns *ir)
+   } else if (stfp) {  /* FP to integer conversion. */
+     if (irt_isguard(ir->t)) {
+       /* Checked conversions are only supported from number to int. */
+-      lj_assertA(irt_isint(ir->t) && st == IRT_NUM,
+-		 "bad type for checked CONV");
++      lj_assertA(irt_isint(ir->t) && st == IRT_NUM, "bad type for checked CONV");
+       asm_tointg(as, ir, ra_alloc1(as, lref, RSET_FPR));
+     } else {
+       Reg dest = ra_dest(as, ir, RSET_GPR);
+@@ -539,16 +531,12 @@ static void asm_conv(ASMState *as, IRIns *ir)
+ 	emit_djk(as, LOONGI_XOR, dest, dest, RID_TMP);
+ 	emit_dji(as, LOONGI_ADDU16I_D, RID_TMP, RID_R0, 0x8000);
+ 	emit_dj(as, LOONGI_MOVFR2GR_S, dest, tmp);
+-	emit_dj(as, st == IRT_FLOAT ? LOONGI_FTINTRM_W_S : LOONGI_FTINTRM_W_D,
+-		tmp, tmp);
+-	emit_djk(as, st == IRT_FLOAT ? LOONGI_FSUB_S : LOONGI_FSUB_D,
+-		 tmp, left, tmp);
++	emit_dj(as, st == IRT_FLOAT ? LOONGI_FTINTRM_W_S : LOONGI_FTINTRM_W_D, tmp, tmp);
++	emit_djk(as, st == IRT_FLOAT ? LOONGI_FSUB_S : LOONGI_FSUB_D, tmp, left, tmp);
+ 	if (st == IRT_FLOAT)
+-	  emit_lsptr(as, LOONGI_FLD_S, (tmp & 0x1f),
+-		     (void *)&as->J->k32[LJ_K32_2P31], RSET_GPR);
++	  emit_lsptr(as, LOONGI_FLD_S, (tmp & 0x1f), (void *)&as->J->k32[LJ_K32_2P31], RSET_GPR);
+ 	else
+-	  emit_lsptr(as, LOONGI_FLD_D, (tmp & 0x1f),
+-		     (void *)&as->J->k64[LJ_K64_2P31], RSET_GPR);
++	  emit_lsptr(as, LOONGI_FLD_D, (tmp & 0x1f), (void *)&as->J->k64[LJ_K64_2P31], RSET_GPR);
+       } else if (irt_isu64(ir->t)) {  /* FP to U64 conversion. */
+ 	MCLabel l_end;
+ 	emit_dj(as, LOONGI_MOVFR2GR_D, dest, tmp);
+@@ -557,26 +545,22 @@ static void asm_conv(ASMState *as, IRIns *ir)
+ 	if (st == IRT_NUM) {
+ 	  emit_dj(as, LOONGI_FTINTRZ_L_D, tmp, tmp);
+ 	  emit_djk(as, LOONGI_FADD_D, tmp, left, tmp);
+-	  emit_lsptr(as, LOONGI_FLD_D, (tmp & 0x1f),
+-		     (void *)&as->J->k64[LJ_K64_M2P64],
++	  emit_lsptr(as, LOONGI_FLD_D, (tmp & 0x1f), (void *)&as->J->k64[LJ_K64_M2P64],
+ 		     rset_exclude(RSET_GPR, dest));
+ 	  emit_branch21(as, LOONGI_BCNEZ, 0, l_end);
+ 	  emit_dj(as, LOONGI_FTINTRZ_L_D, tmp, left);
+ 	  emit_djk(as, LOONGI_FCMP_CLT_D, 0, left, tmp);
+-	  emit_lsptr(as, LOONGI_FLD_D, (tmp & 0x1f),
+-		     (void *)&as->J->k64[LJ_K64_2P63],
++	  emit_lsptr(as, LOONGI_FLD_D, (tmp & 0x1f), (void *)&as->J->k64[LJ_K64_2P63],
+ 		     rset_exclude(RSET_GPR, dest));
+ 	} else {
+ 	  emit_dj(as, LOONGI_FTINTRZ_L_S, tmp, tmp);
+ 	  emit_djk(as, LOONGI_FADD_S, tmp, left, tmp);
+-	  emit_lsptr(as, LOONGI_FLD_S, (tmp & 0x1f),
+-		     (void *)&as->J->k32[LJ_K32_M2P64],
++	  emit_lsptr(as, LOONGI_FLD_S, (tmp & 0x1f), (void *)&as->J->k32[LJ_K32_M2P64],
+ 		     rset_exclude(RSET_GPR, dest));
+ 	  emit_branch21(as, LOONGI_BCNEZ, 0, l_end);
+ 	  emit_dj(as, LOONGI_FTINTRZ_L_S, tmp, left);
+ 	  emit_djk(as, LOONGI_FCMP_CLT_S, 0, left, tmp);
+-	  emit_lsptr(as, LOONGI_FLD_S, (tmp & 0x1f),
+-		     (void *)&as->J->k32[LJ_K32_2P63],
++	  emit_lsptr(as, LOONGI_FLD_S, (tmp & 0x1f), (void *)&as->J->k32[LJ_K32_2P63],
+ 		     rset_exclude(RSET_GPR, dest));
+ 	}
+       } else {
+@@ -592,9 +576,9 @@ static void asm_conv(ASMState *as, IRIns *ir)
+     if (st >= IRT_I8 && st <= IRT_U16) {  /* Extend to 32 bit integer. */
+       Reg left = ra_alloc1(as, ir->op1, RSET_GPR);
+       lj_assertA(irt_isint(ir->t) || irt_isu32(ir->t), "bad type for CONV EXT");
+-      if ((ir->op2 & IRCONV_SEXT)) {	// sign-extend
++      if ((ir->op2 & IRCONV_SEXT)) {  /* sign-extend */
+ 	emit_dj(as, st == IRT_I8 ? LOONGI_EXT_W_B : LOONGI_EXT_W_H, dest, left);
+-      } else {	// zero-extend
++      } else {  /* zero-extend */
+         int msbd = st == IRT_U8 ? 7 : 15;
+         emit_djml(as, LOONGI_BSTRPICK_D, dest, left, msbd, 0);
+       }
+@@ -613,13 +597,14 @@ static void asm_conv(ASMState *as, IRIns *ir)
+ 	}
+       } else {
+ 	if (st64 && !(ir->op2 & IRCONV_NONE)) {
+-	  /* This is either a 32 bit reg/reg mov which zeroes the hiword
++	  /*
++	  ** This is either a 32 bit reg/reg mov which zeroes the hiword
+ 	  ** or a load of the loword from a 64 bit address.
+ 	  */
+ 	  Reg left = ra_alloc1(as, lref, RSET_GPR);
+ 	  emit_djml(as, LOONGI_BSTRPICK_D, dest, left, 31, 0);
+ 	} else {  /* 32/32 bit no-op (cast). */
+-	  ra_leftov(as, dest, lref);	/* Do nothing, but may need to move regs. */
++	  ra_leftov(as, dest, lref);  /* Do nothing, but may need to move regs. */
+ 	}
+       }
+     }
+@@ -636,7 +621,7 @@ static void asm_strto(ASMState *as, IRIns *ir)
+   ra_evictset(as, drop);
+   if (ir->s) ofs = sps_scale(ir->s);
+   asm_guard(as, LOONGI_BEQ, RID_RET, RID_ZERO);  /* Test return status. */
+-  args[0] = ir->op1;      /* GCstr *str */
++  args[0] = ir->op1;  /* GCstr *str */
+   args[1] = ASMREF_TMP1;  /* TValue *n  */
+   asm_gencall(as, ci, args);
+   /* Store the result to the spill slot or temp slots. */
+@@ -678,7 +663,7 @@ static void asm_tvstore64(ASMState *as, Reg base, int32_t ofs, IRRef ref)
+ }
+ 
+ /* Get pointer to TValue. */
+-static void asm_tvptr(ASMState *as, Reg dest, IRRef ref, MSize mode)	// todo-new
++static void asm_tvptr(ASMState *as, Reg dest, IRRef ref, MSize mode)
+ {
+   int32_t tmpofs = (int32_t)(offsetof(global_State, tmptv)-32768);
+   RegSet allow = RSET_GPR;
+@@ -726,7 +711,8 @@ static void asm_aref(ASMState *as, IRIns *ir)
+   emit_dju(as, LOONGI_SLLI_D, RID_TMP, idx, 3);
+ }
+ 
+-/* Inlined hash lookup. Specialized for key type and for const keys.
++/*
++** Inlined hash lookup. Specialized for key type and for const keys.
+ ** The equivalent C code is:
+ **   Node *n = hashkey(t, key);
+ **   do {
+@@ -776,7 +762,7 @@ static void asm_href(ASMState *as, IRIns *ir, IROp merge)
+       key = ra_alloc1(as, refkey, allow);
+       rset_clear(allow, key);
+     }
+-  } 
++  }
+ 
+   /* Key not found in chain: jump to exit (if merged) or load niltv. */
+   l_end = emit_label(as);
+@@ -830,7 +816,7 @@ static void asm_href(ASMState *as, IRIns *ir, IROp merge)
+     emit_djk(as, LOONGI_SUB_W, tmp1, tmp2, tmp1);
+     emit_dju(as, LOONGI_SLLI_W, tmp1, tmp1, 3);
+     emit_dju(as, LOONGI_SLLI_W, tmp2, tmp1, 5);
+-    emit_djk(as, LOONGI_AND, tmp1, tmp2, tmphash);	// idx = hi & tab->hmask
++    emit_djk(as, LOONGI_AND, tmp1, tmp2, tmphash);  /* idx = hi & tab->hmask */
+     emit_dji(as, LOONGI_LD_D, dest, tab, ((int32_t)offsetof(GCtab, node))&0xfff);
+     emit_dji(as, LOONGI_LD_W, tmp2, tab, ((int32_t)offsetof(GCtab, hmask))&0xfff);
+     if (isk) {
+@@ -847,13 +833,13 @@ static void asm_href(ASMState *as, IRIns *ir, IROp merge)
+       emit_dju(as, LOONGI_ROTRI_W, dest, tmp1, (-HASH_ROT1)&0x1f);
+       if (irt_isnum(kt)) {
+ 	emit_dju(as, LOONGI_SLLI_W, tmp1, tmp1, 1);
+-	emit_dju(as, LOONGI_SRAI_D, tmp1, tmp1, 32);	// hi
+-	emit_dju(as, LOONGI_SLLI_W, tmp2, tmp1, 0);	// lo
++	emit_dju(as, LOONGI_SRAI_D, tmp1, tmp1, 32);  /* hi */
++	emit_dju(as, LOONGI_SLLI_W, tmp2, tmp1, 0);  /* lo */
+ 	emit_dj(as, LOONGI_MOVFR2GR_D, tmp1, key);
+       } else {
+ 	checkmclim(as);
+-	emit_dju(as, LOONGI_SRAI_D, tmp1, tmp1, 32);	// hi
+-	emit_dju(as, LOONGI_SLLI_W, tmp2, key, 0);	// lo
++	emit_dju(as, LOONGI_SRAI_D, tmp1, tmp1, 32);  /* hi */
++	emit_dju(as, LOONGI_SLLI_W, tmp2, key, 0);  /* lo */
+ 	emit_djk(as, LOONGI_ADD_D, tmp1, key, type);
+       }
+     }
+@@ -953,23 +939,17 @@ static LOONGIns asm_fxloadins(ASMState *as, IRIns *ir)
+ {
+   UNUSED(as);
+   switch (irt_type(ir->t)) {
+-  case IRT_I8:
+-    return LOONGI_LD_B;
+-  case IRT_U8:
+-    return LOONGI_LD_BU;
+-  case IRT_I16:
+-    return LOONGI_LD_H;
+-  case IRT_U16:
+-    return LOONGI_LD_HU;
++  case IRT_I8: return LOONGI_LD_B;
++  case IRT_U8: return LOONGI_LD_BU;
++  case IRT_I16: return LOONGI_LD_H;
++  case IRT_U16: return LOONGI_LD_HU;
+   case IRT_NUM:
+     lj_assertA(!LJ_SOFTFP32, "unsplit FP op");
+     return LOONGI_FLD_D;
+   /* fallthrough */
+-  case IRT_FLOAT:
+-    return LOONGI_FLD_S;
++  case IRT_FLOAT: return LOONGI_FLD_S;
+   /* fallthrough */
+-  default:
+-    return irt_is64(ir->t) ? LOONGI_LD_D : LOONGI_LD_W;
++  default: return irt_is64(ir->t) ? LOONGI_LD_D : LOONGI_LD_W;
+   }
+ }
+ 
+@@ -1009,7 +989,7 @@ static void asm_fload(ASMState *as, IRIns *ir)
+       }
+     }
+     ofs = field_ofs[ir->op2];
+-  lj_assertA(!irt_isfp(ir->t), "bad FP FLOAD");
++    lj_assertA(!irt_isfp(ir->t), "bad FP FLOAD");
+   }
+   rset_clear(allow, idx);
+   emit_lso(as, loongi, dest, idx, ofs, allow);
+@@ -1052,7 +1032,6 @@ static void asm_ahuvload(ASMState *as, IRIns *ir)
+   RegSet allow = RSET_GPR;
+   int32_t ofs = 0;
+   IRType1 t = ir->t;
+-
+   type = ra_scratch(as, allow);
+   rset_clear(allow, type);
+ 
+@@ -1074,8 +1053,7 @@ static void asm_ahuvload(ASMState *as, IRIns *ir)
+     asm_guard(as, LOONGI_BEQ, tmp2, RID_ZERO);
+     emit_dju(as, LOONGI_SLTUI, tmp2, type, ((int32_t)LJ_TISNUM)&0xfff);
+   } else {
+-    asm_guard(as, LOONGI_BNE, type,
+-	      ra_allock(as, (int32_t)irt_toitype(t), allow));
++    asm_guard(as, LOONGI_BNE, type, ra_allock(as, (int32_t)irt_toitype(t), allow));
+   }
+   if (ra_hasreg(dest)) {
+     if (irt_isnum(t)) {
+@@ -1276,10 +1254,10 @@ static void asm_tbar(ASMState *as, IRIns *ir)
+   MCLabel l_end = emit_label(as);
+   emit_dji(as, LOONGI_ST_D, link, tab, ((int32_t)offsetof(GCtab, gclist))&0xfff);
+   emit_dji(as, LOONGI_ST_B, mark, tab, ((int32_t)offsetof(GCtab, marked))&0xfff);
+-  emit_setgl(as, tab, gc.grayagain);	// make tab gray again
++  emit_setgl(as, tab, gc.grayagain);
+   emit_getgl(as, link, gc.grayagain);
+-  emit_branch(as, LOONGI_BEQ, RID_TMP, RID_ZERO, l_end);	// black: not jump
+-  emit_djk(as, LOONGI_XOR, mark, mark, RID_TMP);	// mark=0: gray
++  emit_branch(as, LOONGI_BEQ, RID_TMP, RID_ZERO, l_end);
++  emit_djk(as, LOONGI_XOR, mark, mark, RID_TMP);
+   emit_dju(as, LOONGI_ANDI, RID_TMP, mark, LJ_GC_BLACK);
+   emit_dji(as, LOONGI_LD_BU, mark, tab, ((int32_t)offsetof(GCtab, marked))&0xfff);
+ }
+@@ -1291,7 +1269,7 @@ static void asm_obar(ASMState *as, IRIns *ir)
+   MCLabel l_end;
+   Reg obj, val, tmp;
+   /* No need for other object barriers (yet). */
+-  lj_assertA(IR(ir->op1)->o == IR_UREFC, "bad OBAR type");	// Closed upvalue
++  lj_assertA(IR(ir->op1)->o == IR_UREFC, "bad OBAR type");
+   ra_evictset(as, RSET_SCRATCH);
+   l_end = emit_label(as);
+   args[0] = ASMREF_TMP1;  /* global_State *g */
+@@ -1301,7 +1279,7 @@ static void asm_obar(ASMState *as, IRIns *ir)
+   tmp = ra_scratch(as, rset_exclude(RSET_GPR, obj));
+   emit_branch(as, LOONGI_BEQ, tmp, RID_ZERO, l_end);
+   emit_addk(as, ra_releasetmp(as, ASMREF_TMP1), RID_JGL, -32768, RSET_GPR);
+-  emit_branch(as, LOONGI_BEQ, RID_TMP, RID_ZERO, l_end);	// black: jump
++  emit_branch(as, LOONGI_BEQ, RID_TMP, RID_ZERO, l_end);
+   emit_dju(as, LOONGI_ANDI, tmp, tmp, LJ_GC_BLACK);
+   emit_dju(as, LOONGI_ANDI, RID_TMP, RID_TMP, LJ_GC_WHITES);
+   val = ra_alloc1(as, ir->op2, rset_exclude(RSET_GPR, obj));
+@@ -1350,7 +1328,7 @@ static void asm_add(ASMState *as, IRIns *ir)
+     Reg left = ra_hintalloc(as, ir->op1, dest, RSET_GPR);
+     if (irref_isk(ir->op2)) {
+       intptr_t k = get_kval(as, ir->op2);
+-      if (LOONGF_S_OK(k, 12)) {		// si12
++      if (LOONGF_S_OK(k, 12)) {
+         if (irt_is64(t)) {
+           emit_dji(as, LOONGI_ADDI_D, dest, left, k&0xfff);
+         } else {
+@@ -1384,8 +1362,7 @@ static void asm_mul(ASMState *as, IRIns *ir)
+ {
+   if (irt_isnum(ir->t)) {
+     asm_fparith(as, ir, LOONGI_FMUL_D);
+-  } else
+-  {
++  } else {
+     Reg dest = ra_dest(as, ir, RSET_GPR);
+     Reg right, left = ra_alloc2(as, ir, RSET_GPR);
+     right = (left >> 8); left &= 255;
+@@ -1427,7 +1404,7 @@ static void asm_arithov(ASMState *as, IRIns *ir)
+   if (irref_isk(ir->op2)) {
+     int k = IR(ir->op2)->i;
+     if (ir->o == IR_SUBOV) k = (int)(~(unsigned int)k+1u);
+-    if (LOONGF_S_OK(k, 12)) {	/* (dest < left) == (k >= 0 ? 1 : 0) */
++    if (LOONGF_S_OK(k, 12)) {  /* (dest < left) == (k >= 0 ? 1 : 0) */
+       left = ra_alloc1(as, ir->op1, allow);
+       asm_guard(as, k >= 0 ? LOONGI_BNE : LOONGI_BEQ, tmp2, RID_ZERO);
+       emit_djk(as, LOONGI_SLT, tmp2, dest, dest == left ? tmp2 : left);
+@@ -1463,14 +1440,14 @@ static void asm_mulov(ASMState *as, IRIns *ir)
+   Reg dest = ra_dest(as, ir, RSET_GPR);
+   Reg tmp, tmp2, right, left = ra_alloc2(as, ir, RSET_GPR);
+   right = (left >> 8); left &= 255;
+-  tmp = ra_scratch(as, rset_exclude(rset_exclude(rset_exclude(RSET_GPR, left),
+-						 right), dest));
+-  tmp2 = ra_scratch(as, rset_exclude(rset_exclude(rset_exclude(rset_exclude(RSET_GPR, left),
+-						right), dest), tmp));
++  tmp = ra_scratch(as, rset_exclude(rset_exclude(
++			rset_exclude(RSET_GPR, left), right), dest));
++  tmp2 = ra_scratch(as, rset_exclude(rset_exclude(rset_exclude(
++			rset_exclude(RSET_GPR, left), right), dest), tmp));
+   asm_guard(as, LOONGI_BNE, tmp2, tmp);
+   emit_dju(as, LOONGI_SRAI_W, tmp2, dest, 31);
+-  emit_djk(as, LOONGI_MUL_W, dest, left, right);	// dest: [31:0]+signextend
+-  emit_djk(as, LOONGI_MULH_W, tmp, left, right);	// tmp: [63:32]
++  emit_djk(as, LOONGI_MUL_W, dest, left, right);
++  emit_djk(as, LOONGI_MULH_W, tmp, left, right);
+ }
+ 
+ static void asm_bnot(ASMState *as, IRIns *ir)
+@@ -1583,28 +1560,24 @@ static void asm_fpcomp(ASMState *as, IRIns *ir)
+   Reg right, left = ra_alloc2(as, ir, RSET_FPR);
+   right = (left >> 8); left &= 255;
+   asm_guard21(as, (op&1) ? LOONGI_BCNEZ : LOONGI_BCEQZ, 0);
+-  // use case
+   switch (op) {
+-    case IR_LT: case IR_UGE:
+-      emit_djk(as, LOONGI_FCMP_CLT_D, 0, left, right);
+-      break;
+-    case IR_GE: case IR_ULT:
+-      emit_djk(as, LOONGI_FCMP_CULT_D, 0, left, right);
+-      break;
+-    case IR_LE: case IR_UGT: case IR_ABC:
+-      emit_djk(as, LOONGI_FCMP_CLE_D, 0, left, right);
+-      break;
+-    case IR_ULE: case IR_GT:
+-      emit_djk(as, LOONGI_FCMP_CULE_D, 0, left, right);
+-      break;
+-    case IR_EQ: case IR_NE:
+-      emit_djk(as, LOONGI_FCMP_CEQ_D, 0, left, right);
+-      break;
+-    //case IR_NE:
+-    //  emit_djk(as, LOONGI_FCMP_CNE_D, 0, left, right);
+-    //  break;
+-    default:
+-      break;
++  case IR_LT: case IR_UGE:
++    emit_djk(as, LOONGI_FCMP_CLT_D, 0, left, right);
++    break;
++  case IR_GE: case IR_ULT:
++    emit_djk(as, LOONGI_FCMP_CULT_D, 0, left, right);
++    break;
++  case IR_LE: case IR_UGT: case IR_ABC:
++    emit_djk(as, LOONGI_FCMP_CLE_D, 0, left, right);
++    break;
++  case IR_ULE: case IR_GT:
++    emit_djk(as, LOONGI_FCMP_CULE_D, 0, left, right);
++    break;
++  case IR_EQ: case IR_NE:
++    emit_djk(as, LOONGI_FCMP_CEQ_D, 0, left, right);
++    break;
++  default:
++    break;
+   }
+ }
+ 
+@@ -1620,11 +1593,11 @@ static void asm_intcomp(ASMState *as, IRIns *ir)
+   if (op == IR_ABC) op = IR_UGT;
+   if ((op&4) == 0 && irref_isk(ir->op2) && get_kval(as, ir->op2) == 0) {
+     switch (op) {
+-      case IR_GT: asm_guard(as, LOONGI_BGE, RID_ZERO, left); break;
+-      case IR_LE: asm_guard(as, LOONGI_BLT, RID_ZERO, left); break;
+-      case IR_GE: asm_guard(as, LOONGI_BLT, left, RID_ZERO); break;
+-      case IR_LT: asm_guard(as, LOONGI_BGE, left, RID_ZERO); break;
+-      default: break;
++    case IR_GT: asm_guard(as, LOONGI_BGE, RID_ZERO, left); break;
++    case IR_LE: asm_guard(as, LOONGI_BLT, RID_ZERO, left); break;
++    case IR_GE: asm_guard(as, LOONGI_BLT, left, RID_ZERO); break;
++    case IR_LT: asm_guard(as, LOONGI_BGE, left, RID_ZERO); break;
++    default: break;
+     }
+     return;
+   }
+@@ -1712,7 +1685,7 @@ static void asm_stack_check(ASMState *as, BCReg topslot,
+     ra_modified(as, tmp);
+   } else {
+     tmp = RID_RET;
+-    emit_dji(as, LOONGI_LD_D, tmp, RID_SP, 0);	/* Restore tmp1 register. */
++    emit_dji(as, LOONGI_LD_D, tmp, RID_SP, 0);  /* Restore tmp1 register. */
+   }
+   as->snapno = exitno;
+   asm_guard(as, LOONGI_BNE, tmp, RID_ZERO);
+@@ -1792,7 +1765,6 @@ static void asm_gc_check(ASMState *as)
+   args[1] = ASMREF_TMP2;  /* MSize steps     */
+   asm_gencall(as, ci, args);
+   tmp1 = ra_releasetmp(as, ASMREF_TMP1);
+-  //emit_dj32i(as, tmp1, RID_JGL, -32768);
+   tmp2 = ra_releasetmp(as, ASMREF_TMP2);
+   ra_allockreg(as, (int64_t)(J2G(as->J)), tmp1);
+   emit_loadi(as, tmp2, as->gcsteps);
+@@ -1815,9 +1787,9 @@ static void asm_loop_fixup(ASMState *as)
+     /* asm_guard* already inverted the bceqz/bcnez/beq/bne/blt/bge, and patched the final b. */
+     uint32_t mask = (p[-2] & 0xfc000000) == 0x48000000 ? 0x1fffffu : 0xffffu;
+     ptrdiff_t delta = target - (p - 2);
+-    if (mask == 0x1fffffu) {	/* BCEQZ  BCNEZ*/
++    if (mask == 0x1fffffu) {  /* BCEQZ  BCNEZ*/
+       p[-2] = p[-2] | LOONGF_I((uint32_t)delta & 0xffffu) | (((uint32_t)delta & 0x1f0000u) >> 16);
+-    } else {	/* BEQ BNE BLE BGE BLTU BGEU*/
++    } else {  /* BEQ BNE BLE BGE BLTU BGEU*/
+       p[-2] |= LOONGF_I(delta & 0xffffu);
+     }
+     if (p[-1] == 0)
+@@ -1832,7 +1804,7 @@ static void asm_loop_fixup(ASMState *as)
+ /* Fixup the tail of the loop. */
+ static void asm_loop_tail_fixup(ASMState *as)
+ {
+-  UNUSED(as);	/* Nothing to do. */
++  UNUSED(as);  /* Nothing to do. */
+ }
+ 
+ /* -- Head of trace ------------------------------------------------------- */
+@@ -1861,7 +1833,7 @@ static Reg asm_head_side_base(ASMState *as, IRIns *irp)
+     if (rset_test(as->modset, r) || irt_ismarked(ir->t))
+       ir->r = RID_INIT;  /* No inheritance for modified BASE register. */
+     if (irp->r == r) {
+-      return r;	/* Same BASE register already coalesced. */
++      return r;  /* Same BASE register already coalesced. */
+     } else if (ra_hasreg(irp->r) && rset_test(as->freeset, irp->r)) {
+       emit_move(as, r, irp->r);  /* Move from coalesced parent reg. */
+       return irp->r;
+@@ -1929,7 +1901,6 @@ static Reg asm_setup_call_slots(ASMState *as, IRIns *ir, const CCallInfo *ci)
+   }
+   if (nslots > as->evenspill)  /* Leave room for args in stack slots. */
+     as->evenspill = nslots;
+-//  return REGSP_HINT(RID_RET); // TODO
+   return irt_isfp(ir->t) ? REGSP_HINT(RID_FPRET) : REGSP_HINT(RID_RET);
+ }
+ 
+@@ -1983,21 +1954,21 @@ void lj_asm_patchexit(jit_State *J, GCtrace *T, ExitNo exitno, MCode *target)
+ 	  Reg rd = ins & 0x1f;
+ 	  switch (ins & 0xfc000000u) {
+           case LOONGI_BEQ:
+-          *p = LOONGI_SUB_D | LOONGF_D(RID_TMP) | LOONGF_J(rj) | LOONGF_K(rd);
+-          p[1] = LOONGI_BEQZ | LOONGF_J(RID_TMP) | LOONGF_I(delta & 0xffff) | ((delta & 0x1f0000) >> 16);
+-	  break;
++            *p = LOONGI_SUB_D | LOONGF_D(RID_TMP) | LOONGF_J(rj) | LOONGF_K(rd);
++            p[1] = LOONGI_BEQZ | LOONGF_J(RID_TMP) | LOONGF_I(delta & 0xffff) | ((delta & 0x1f0000) >> 16);
++	    break;
+ 	  case LOONGI_BNE:
+-          *p = LOONGI_SUB_D | LOONGF_D(RID_TMP) | LOONGF_J(rj) | LOONGF_K(rd);
+-          p[1] = LOONGI_BNEZ | LOONGF_J(RID_TMP) | LOONGF_I(delta & 0xffff) | ((delta & 0x1f0000) >> 16);
+-	  break;
++            *p = LOONGI_SUB_D | LOONGF_D(RID_TMP) | LOONGF_J(rj) | LOONGF_K(rd);
++            p[1] = LOONGI_BNEZ | LOONGF_J(RID_TMP) | LOONGF_I(delta & 0xffff) | ((delta & 0x1f0000) >> 16);
++	    break;
+ 	  case LOONGI_BLT:
+-          *p = LOONGI_SLT | LOONGF_D(RID_TMP) | LOONGF_J(rj) | LOONGF_K(rd);
+-          p[1] = LOONGI_BNEZ | LOONGF_J(RID_TMP) | LOONGF_I(delta & 0xffff) | ((delta & 0x1f0000) >> 16);
+-	  break;
++            *p = LOONGI_SLT | LOONGF_D(RID_TMP) | LOONGF_J(rj) | LOONGF_K(rd);
++            p[1] = LOONGI_BNEZ | LOONGF_J(RID_TMP) | LOONGF_I(delta & 0xffff) | ((delta & 0x1f0000) >> 16);
++	    break;
+ 	  case LOONGI_BGE:
+-          *p = LOONGI_SLT | LOONGF_D(RID_TMP) | LOONGF_J(rj) | LOONGF_K(rd);
+-          p[1] = LOONGI_BEQZ | LOONGF_J(RID_TMP) | LOONGF_I(delta & 0xffff) | ((delta & 0x1f0000) >> 16);
+-	  break;
++            *p = LOONGI_SLT | LOONGF_D(RID_TMP) | LOONGF_J(rj) | LOONGF_K(rd);
++            p[1] = LOONGI_BEQZ | LOONGF_J(RID_TMP) | LOONGF_I(delta & 0xffff) | ((delta & 0x1f0000) >> 16);
++	    break;
+ 	  }
+ 	} else {
+           lj_assertJ(LOONGF_S_OK(delta, 21), "branch target out of range");
+diff --git a/src/lj_emit_loongarch64.h b/src/lj_emit_loongarch64.h
+index c063edae..6cbfa8d3 100644
+--- a/src/lj_emit_loongarch64.h
++++ b/src/lj_emit_loongarch64.h
+@@ -86,7 +86,7 @@ static void emit_loads32(ASMState *as, Reg r, int32_t i)
+ static void emit_loadi(ASMState *as, Reg r, int32_t i)
+ {
+   if (checki12(i)) {
+-    *--as->mcp = LOONGI_ADDI_D | LOONGF_D(r) | RID_ZERO | LOONGF_I(i&0xfff);
++    *--as->mcp = LOONGI_ADDI_D | LOONGF_D(r&0x1f) | LOONGF_J(RID_ZERO) | LOONGF_I(i&0xfff);
+   } else {
+     emit_loads32(as, r, i);
+   }
+@@ -98,10 +98,10 @@ static void emit_loadu64(ASMState *as, Reg r, uint64_t u64)
+   if (checki32((int64_t)u64)) {
+     emit_loadi(as, r, (int32_t)u64);
+   } else {
+-      *--as->mcp = LOONGI_LU52I_D | LOONGF_D(r) | LOONGF_J(r) | LOONGF_I((u64>>52)&0xfff);
+-      *--as->mcp = LOONGI_LU32I_D | LOONGF_D(r) | LOONGF_I20((u64>>32)&0xfffff);
+-      *--as->mcp = LOONGI_ORI | LOONGF_D(r) | LOONGF_J(r) | LOONGF_I(u64&0xfff);
+-      *--as->mcp = LOONGI_LU12I_W | LOONGF_D(r) | LOONGF_I20((u64>>12)&0xfffff);
++    *--as->mcp = LOONGI_LU52I_D | LOONGF_D(r) | LOONGF_J(r) | LOONGF_I((u64>>52)&0xfff);
++    *--as->mcp = LOONGI_LU32I_D | LOONGF_D(r) | LOONGF_I20((u64>>32)&0xfffff);
++    *--as->mcp = LOONGI_ORI | LOONGF_D(r) | LOONGF_J(r) | LOONGF_I(u64&0xfff);
++    *--as->mcp = LOONGI_LU12I_W | LOONGF_D(r) | LOONGF_I20((u64>>12)&0xfffff);
+   }
+ }
+ 
+@@ -142,7 +142,7 @@ static void emit_loadk64(ASMState *as, Reg r, IRIns *ir)
+     emit_dj(as, LOONGI_MOVGR2FR_D, r, r64);
+   }
+   if ((uint32_t)((intptr_t)k-(intptr_t)J2G(as->J)) < 65536)
+-    emit_lsptr(as, LOONGI_LD_D, r64, (void *)k, 0);	/*To copy a doubleword from a GPR to an FPR*/
++    emit_lsptr(as, LOONGI_LD_D, r64, (void *)k, 0);  /*To copy a doubleword from a GPR to an FPR*/
+   else
+     emit_loadu64(as, r64, *k);
+ }
+@@ -179,7 +179,7 @@ static void emit_branch(ASMState *as, LOONGIns loongi, Reg rj, Reg rd, MCode *ta
+   MCode *p = as->mcp;
+   ptrdiff_t delta = target - (p - 1);
+   lj_assertA(((delta + 0x8000) >> 16) == 0, "branch target out of range");
+-  /*BEQ BNE BGE BLZ*/
++  /* BEQ BNE BGE BLZ */
+   *--p = loongi | LOONGF_D(rd) | LOONGF_J(rj) | LOONGF_I(((uint32_t)delta & 0xffffu));
+   as->mcp = p;
+ }
+@@ -190,7 +190,7 @@ static void emit_branch21(ASMState *as, LOONGIns loongi, Reg rj, MCode *target)
+   ptrdiff_t delta = target - (p - 1);
+   lj_assertA(((delta + 0x100000) >> 21) == 0, "branch target out of range");
+   *--p = loongi | LOONGF_J(rj) | LOONGF_I(((uint32_t)delta & 0xffffu))
+-         | (((uint32_t)delta & 0x1f0000u)>>16);		/*BEQZ BNEZ BCEQZ BCNEZ*/
++         | (((uint32_t)delta & 0x1f0000u)>>16);  /* BEQZ BNEZ BCEQZ BCNEZ */
+   as->mcp = p;
+ }
+ 
+@@ -198,7 +198,7 @@ static void emit_jmp(ASMState *as, MCode *target)
+ {
+   MCode *p = as->mcp;
+   ptrdiff_t delta = target - (p - 1);
+-  emit_b_bl(as, LOONGI_B, (delta&0x3ffffff));	/*offs 26*/
++  emit_b_bl(as, LOONGI_B, (delta&0x3ffffff));  /* offs 26 */
+ }
+ 
+ #define emit_move(as, dst, src) \
+@@ -221,13 +221,13 @@ static void emit_call(ASMState *as, void *target)
+ /* Generic move between two regs. */
+ static void emit_movrr(ASMState *as, IRIns *ir, Reg dst, Reg src)
+ {
+-  if (dst < RID_MAX_GPR && src >= RID_MIN_FPR) { // FR to GR
++  if (dst < RID_MAX_GPR && src >= RID_MIN_FPR) {  /* FR to GR */
+     emit_dj(as, irt_isnum(ir->t) ? LOONGI_MOVFR2GR_D : LOONGI_MOVFR2GR_S, dst, src);
+-  } else if (dst < RID_MAX_GPR) { // GR to GR
++  } else if (dst < RID_MAX_GPR) {  /* GR to GR */
+     emit_move(as, dst, src);
+-  } else if (dst >= RID_MIN_FPR  && src < RID_MAX_GPR) { // GR to FR
++  } else if (dst >= RID_MIN_FPR  && src < RID_MAX_GPR) {  /* GR to FR */
+     emit_dj(as, irt_isnum(ir->t) ? LOONGI_MOVGR2FR_D : LOONGI_MOVGR2FR_W, dst, src);
+-  } else { // FR to FR
++  } else {  /* FR to FR */
+     emit_dj(as, irt_isnum(ir->t) ? LOONGI_FMOV_D : LOONGI_FMOV_S, dst, src);
+   }
+ }
+@@ -250,17 +250,17 @@ static void emit_lso(ASMState *as, LOONGIns loongi, Reg dest, Reg src, int64_t i
+   } else {
+     LOONGIns loongk = LOONGI_NOP;
+     switch (loongi) {
+-      case LOONGI_LD_D: loongk = LOONGI_LDX_D; break;
+-      case LOONGI_LD_W: loongk = LOONGI_LDX_W; break;
+-      case LOONGI_ST_D: loongk = LOONGI_STX_D; break;
+-      case LOONGI_FLD_D: loongk = LOONGI_FLDX_D; break;
+-      case LOONGI_FST_D: loongk = LOONGI_FSTX_D; break;
+-      case LOONGI_LD_B: loongk = LOONGI_LDX_B; break;
+-      case LOONGI_LD_BU: loongk = LOONGI_LDX_BU; break;
+-      case LOONGI_LD_H: loongk = LOONGI_LDX_H; break;
+-      case LOONGI_LD_HU: loongk = LOONGI_LDX_HU; break;
+-      case LOONGI_FLD_S: loongk = LOONGI_FLDX_S; break;
+-      default: break;
++    case LOONGI_LD_D: loongk = LOONGI_LDX_D; break;
++    case LOONGI_LD_W: loongk = LOONGI_LDX_W; break;
++    case LOONGI_ST_D: loongk = LOONGI_STX_D; break;
++    case LOONGI_FLD_D: loongk = LOONGI_FLDX_D; break;
++    case LOONGI_FST_D: loongk = LOONGI_FSTX_D; break;
++    case LOONGI_LD_B: loongk = LOONGI_LDX_B; break;
++    case LOONGI_LD_BU: loongk = LOONGI_LDX_BU; break;
++    case LOONGI_LD_H: loongk = LOONGI_LDX_H; break;
++    case LOONGI_LD_HU: loongk = LOONGI_LDX_HU; break;
++    case LOONGI_FLD_S: loongk = LOONGI_FLDX_S; break;
++    default: break;
+     }
+     Reg ofs = ra_scratch(as, allow);
+     emit_djk(as, loongk, dest, src, ofs);
+diff --git a/src/lj_target_loongarch64.h b/src/lj_target_loongarch64.h
+index 1e7cba3f..044d3cb9 100644
+--- a/src/lj_target_loongarch64.h
++++ b/src/lj_target_loongarch64.h
+@@ -114,6 +114,7 @@ static LJ_AINLINE uint32_t *exitstub_trace_addr_(uint32_t *p)
+   while (*p == 0x03400000) p++;		/* Skip LOONGI_NOP. */
+   return p;
+ }
++
+ /* Avoid dependence on lj_jit.h if only including lj_target.h. */
+ #define exitstub_trace_addr(T, exitno) \
+   exitstub_trace_addr_((MCode *)((char *)(T)->mcode + (T)->szmcode))
+@@ -133,7 +134,7 @@ static LJ_AINLINE uint32_t *exitstub_trace_addr_(uint32_t *p)
+ #define LOONGF_S_OK(x, b) ((((x) + (1 << (b-1))) >> (b)) == 0)
+ 
+ typedef enum LOONGIns {
+-/* Integer instructions. */
++  /* Integer instructions. */
+   LOONGI_MOVE = 0x00150000,
+   LOONGI_NOP = 0x03400000,
+ 
+@@ -211,7 +212,7 @@ typedef enum LOONGIns {
+   LOONGI_STX_D = 0x381c0000,
+   LOONGI_LDX_W = 0x38080000,
+   LOONGI_STX_W = 0x38180000,
+-  LOONGI_STX_B = 0x38100000, 
++  LOONGI_STX_B = 0x38100000,
+   LOONGI_STX_H = 0x38140000,
+   LOONGI_FLD_S = 0x2b000000,
+   LOONGI_FST_S = 0x2b400000,
+@@ -312,4 +313,3 @@ typedef enum LOONGIns {
+ } LOONGIns;
+ 
+ #endif
+-
+diff --git a/src/vm_loongarch64.dasc b/src/vm_loongarch64.dasc
+index ab8ebc62..d79b55bf 100644
+--- a/src/vm_loongarch64.dasc
++++ b/src/vm_loongarch64.dasc
+@@ -239,16 +239,18 @@
+ |  ld.w INS, 0(PC)
+ |  addi.d PC, PC, 4
+ |.endmacro
++|
+ |// Instruction decode+dispatch.
+ |.macro ins_NEXT2
+ |  decode_OP TMP1, INS
+ |  decode_BC8b TMP1
+ |  add.d TMP0, DISPATCH, TMP1
+ |  ld.d TMP4, 0(TMP0)
+-|   decode_RD RD, INS
+-|   decode_RA RA, INS
++|  decode_RD RD, INS
++|  decode_RA RA, INS
+ |  jirl r0, TMP4, 0
+ |.endmacro
++|
+ |.macro ins_NEXT
+ |  ins_NEXT1
+ |  ins_NEXT2
+@@ -318,7 +320,7 @@
+ |  srli.d TMP1, PC, 1
+ |  andi TMP1, TMP1, 126
+ |  add.d TMP1, TMP1, DISPATCH
+-|  ld.hu TMP2, GG_DISP2HOT(TMP1)		// TMP2: hotcount[]
++|  ld.hu TMP2, GG_DISP2HOT(TMP1)	// TMP2: hotcount[]
+ |  addi.w TMP2, TMP2, -delta
+ |  st.h TMP2, GG_DISP2HOT(TMP1)
+ |  blt TMP2, r0, target
+@@ -698,13 +700,13 @@ static void build_subroutines(BuildCtx *ctx)
+   |  cleartp LFUNC:TMP1
+   |  add.d TMP2, RA, RD
+   |  ld.d TMP1, LFUNC:TMP1->pc
+-  |  st.d TISNIL, -8(TMP2)               // Ensure one valid arg.
++  |  st.d TISNIL, -8(TMP2)		// Ensure one valid arg.
+   |.if FFI
+   |  bnez TMP3, >1
+   |.endif
+   |  // BASE = base, RA = resultptr, RB = meta base
+   |  ld.d KBASE, PC2PROTO(k)(TMP1)
+-  |  jirl r0, TMP0, 0				// Jump to continuation.
++  |  jirl r0, TMP0, 0			// Jump to continuation.
+   |
+   |.if FFI
+   |1:
+@@ -829,7 +831,7 @@ static void build_subroutines(BuildCtx *ctx)
+   |  addi.d TMP1, BASE, -FRAME_CONT
+   |  ld.d BASE, L->top
+   |  st.d PC, -24(BASE)			// [cont|PC]
+-  |   sub.d PC, BASE, TMP1
++  |  sub.d PC, BASE, TMP1
+   |  ld.d LFUNC:RB, FRAME_FUNC(BASE)	// Guaranteed to be a function here.
+   |  addi.d NARGS8:RC, r0, 24		// 3 args for func(t, k, v)
+   |  cleartp LFUNC:RB
+@@ -922,7 +924,7 @@ static void build_subroutines(BuildCtx *ctx)
+   |->vmeta_istype:
+   |  addi.d PC, PC, -4
+   |  st.d BASE, L->base
+-  |  or CARG1, L, r0 
++  |  or CARG1, L, r0
+   |  srli.w CARG2, RA, 3
+   |  srli.w CARG3, RD, 3
+   |  st.d PC, SAVE_PC(sp)
+@@ -1084,7 +1086,6 @@ static void build_subroutines(BuildCtx *ctx)
+   |//-- Base library: checks -----------------------------------------------
+   |.ffunc_1 assert
+   |  gettp TMP1, CARG1
+-  |//  ld.d PC, FRAME_PC(BASE)
+   |  sltui TMP1, TMP1, LJ_TISTRUECOND
+   |  addi.d RA, BASE, -16
+   |  beqz TMP1, ->fff_fallback
+@@ -1226,7 +1227,6 @@ static void build_subroutines(BuildCtx *ctx)
+   |  bl extern lj_strfmt_number	// (lua_State *L, cTValue *o)
+   |  // Returns GCstr *.
+   |  addi.d TMP1, r0, LJ_TSTR
+-  |//  ld.d BASE, L->base
+   |  settp CARG1, TMP1
+   |  b ->fff_restv
+   |
+@@ -1241,7 +1241,6 @@ static void build_subroutines(BuildCtx *ctx)
+   |  addi.d CARG3, BASE, -16
+   |  bl extern lj_tab_next		// (GCtab *t, cTValue *key, TValue *o)
+   |  // Returns 1=found, 0=end, -1=error.
+-  |//  addi.d RA, BASE, -16
+   |  addi.d RD, r0, (2+1)*8
+   |  blt r0, CRET1, ->fff_res		// Found key/value.
+   |  or TMP1, CRET1, r0
+@@ -1367,7 +1366,7 @@ static void build_subroutines(BuildCtx *ctx)
+   |  addi.d BASE, BASE, 24
+   |  // Remember active hook before pcall.
+   |  srli.w TMP3, TMP3, HOOK_ACTIVE_SHIFT
+-  |  st.d CARG2, 0(TMP2)			// Swap function and traceback.
++  |  st.d CARG2, 0(TMP2)		// Swap function and traceback.
+   |  andi TMP3, TMP3, 1
+   |  st.d CARG1, 8(TMP2)
+   |  addi.d PC, TMP3, 24+FRAME_PCALL
+@@ -1395,7 +1394,7 @@ static void build_subroutines(BuildCtx *ctx)
+   |  masknez CARG2, CARG2, CARG4
+   |  maskeqz TMP3, TMP3, CARG4
+   |  or CARG2, TMP3, CARG2
+-  |  blt r0, CARG4, ->fff_fallback		// st > LUA_YIELD?
++  |  blt r0, CARG4, ->fff_fallback	// st > LUA_YIELD?
+   |  xor TMP2, TMP2, CARG3
+   |  or CARG4, TMP2, TMP0
+   |  bnez TMP1, ->fff_fallback		// cframe != 0?
+@@ -1457,7 +1456,7 @@ static void build_subroutines(BuildCtx *ctx)
+   |  mov_true TMP1
+   |  addi.d RD, RD, 16
+   |7:
+-  |  st.d TMP1, -8(BASE)	// Prepend true/false to results.
++  |  st.d TMP1, -8(BASE)		// Prepend true/false to results.
+   |  addi.d RA, BASE, -8
+   |.else
+   |  or RA, BASE, r0
+@@ -1481,7 +1480,7 @@ static void build_subroutines(BuildCtx *ctx)
+   |.else
+   |  or CARG1, L, r0
+   |  or CARG2, L:RA, r0
+-  |  bl extern lj_ffh_coroutine_wrap_err  // (lua_State *L, lua_State *co)
++  |  bl extern lj_ffh_coroutine_wrap_err	// (lua_State *L, lua_State *co)
+   |.endif
+   |
+   |9:  // Handle stack expansion on return from yield.
+@@ -1529,7 +1528,7 @@ static void build_subroutines(BuildCtx *ctx)
+   |  addi.d TMP2, CARG2, -LJ_TISNUM
+   |  slli.w TMP1, CARG1, 0
+   |  bnez TMP2, >1
+-  |  srai.w TMP0, TMP1, 31			// Extract sign. int
++  |  srai.w TMP0, TMP1, 31		// Extract sign. int
+   |  xor TMP1, TMP1, TMP0
+   |  sub.d CARG1, TMP1, TMP0
+   |  slli.d TMP3, CARG1, 32
+@@ -1597,7 +1596,7 @@ static void build_subroutines(BuildCtx *ctx)
+   |  addi.d TMP1, r0, 8
+   |  ld.d CARG1, 0(BASE)
+   |  fld.d FARG1, 0(BASE)
+-  |  bne NARGS8:RC, TMP1, ->fff_fallback		// Need exactly 1 argument.
++  |  bne NARGS8:RC, TMP1, ->fff_fallback	// Need exactly 1 argument.
+   |  checknum CARG1, ->fff_fallback
+   |  bl extern log
+   |  b ->fff_resn
+@@ -1925,11 +1924,11 @@ static void build_subroutines(BuildCtx *ctx)
+   |  st.d BASE, L->base
+   |  addi.d TMP0, TMP1, 8*LUA_MINSTACK
+   |  ld.d TMP2, L->maxstack
+-  |  st.d PC, SAVE_PC(sp)			// Redundant (but a defined value).
++  |  st.d PC, SAVE_PC(sp)		// Redundant (but a defined value).
+   |  st.d TMP1, L->top
+   |  or CARG1, L, r0
+-  |  bltu TMP2, TMP0, >5			// Need to grow stack.
+-  |  jirl r1, CARG3, 0				// (lua_State *L)
++  |  bltu TMP2, TMP0, >5		// Need to grow stack.
++  |  jirl r1, CARG3, 0			// (lua_State *L)
+   |  // Either throws an error, or recovers and returns -1, 0 or nresults+1.
+   |  ld.d BASE, L->base
+   |  slli.w RD, CRET1, 3
+@@ -1973,7 +1972,6 @@ static void build_subroutines(BuildCtx *ctx)
+   |  st.d TMP0, L->top
+   |  bl extern lj_gc_step		// (lua_State *L)
+   |  ld.d BASE, L->base
+-  |//  or ra, MULTRES, r0
+   |  ld.d TMP0, L->top
+   |  ld.d CFUNC:RB, FRAME_FUNC(BASE)
+   |  cleartp CFUNC:RB
+@@ -2166,7 +2164,7 @@ static void build_subroutines(BuildCtx *ctx)
+   |
+   |->vm_exit_handler:
+   |.if JIT
+-  |  ld.w ra, 4(sp)		// li TMP, traceno
++  |  ld.w ra, 4(sp)			// li TMP, traceno
+   |  addi.d sp, sp, -(32*8+32*8)
+   |  savex_ 0, 2
+   |  savex_ 4, 5
+@@ -2227,7 +2225,7 @@ static void build_subroutines(BuildCtx *ctx)
+   |  cleartp LFUNC:RB
+   |  st.w MULTRES, TMPD(sp)
+   |  addi.d TISNIL, r0, LJ_TNIL
+-  |  addi.d TISNUM, r0, LJ_TISNUM		// Setup type comparison constants.
++  |  addi.d TISNUM, r0, LJ_TISNUM	// Setup type comparison constants.
+   |  movgr2fr.w TOBIT, TMP3
+   |  ld.d TMP1, LFUNC:RB->pc
+   |  .STXD r0, DISPATCH, DISPATCH_GL(jit_base)
+@@ -2277,9 +2275,9 @@ static void build_subroutines(BuildCtx *ctx)
+   |  decode_OP TMP1, INS
+   |  decode_BC8b TMP1
+   |  add.d TMP0, DISPATCH, TMP1
+-  |   decode_RD RD, INS
++  |  decode_RD RD, INS
+   |  ld.d TMP4, GG_DISP2STATIC(TMP0)
+-  |   decode_RA RA, INS
++  |  decode_RA RA, INS
+   |  jirl r0, TMP4, 0
+   |
+   |9:  // Rethrow error from the right C frame.
+@@ -2308,7 +2306,7 @@ static void build_subroutines(BuildCtx *ctx)
+   |.if "func" == "ceil"
+   |  addu16i.d TMP0, r0, 0xbff0
+   |.else
+-  |  addu16i.d TMP0, r0, 0x3ff0	// Hiword of +1 (double).
++  |  addu16i.d TMP0, r0, 0x3ff0		// Hiword of +1 (double).
+   |.endif
+   |.if "func" == "trunc"
+   |  slli.d TMP0, TMP0, 32
+@@ -2499,7 +2497,6 @@ static void build_subroutines(BuildCtx *ctx)
+   |  or TMP2, sp, r0
+   |  sub.d sp, sp, TMP1
+   |  st.d ra, -8(TMP2)
+-  |//  slli.w CARG2, CARG2, 3
+   |  st.d r23, -16(TMP2)
+   |  st.d CCSTATE, -24(TMP2)
+   |  or r23, TMP2, r0
+@@ -2692,14 +2689,14 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |  ins_next
+     |
+     |2:  // Check if the tags are the same and it's a table or userdata.
+-    |  xor TMP3, CARG3, CARG4			// Same type?
+-    |  sltui TMP0, CARG3, LJ_TISTABUD+1		// Table or userdata? TMP0=1
++    |  xor TMP3, CARG3, CARG4		// Same type?
++    |  sltui TMP0, CARG3, LJ_TISTABUD+1	// Table or userdata? TMP0=1
+     |  masknez TMP0, TMP0, TMP3		// TMP0=0: not same type, or same type table/userdata
+     |  cleartp TAB:TMP1, CARG1
+     if (vk) {
+       |  beqz TMP0, <1
+     } else {
+-      |  beqz TMP0, ->BC_ISEQV_Z  // Reuse code from opposite instruction.
++      |  beqz TMP0, ->BC_ISEQV_Z  	// Reuse code from opposite instruction.
+     }
+     |  // Different tables or userdatas. Need to check __eq metamethod.
+     |  // Field metatable must be at same offset for GCtab and GCudata!
+@@ -2805,7 +2802,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |  movcf2gr TMP0, FCC0
+     |  b <1
+     |
+-    |6: // RA is an integer, RD is a number.
++    |6:  // RA is an integer, RD is a number.
+     |  sltu TMP0, CARG4, TISNUM
+     |.if FFI
+     |  beqz TMP0, >8
+@@ -2867,7 +2864,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |  addi.d PC, PC, 4
+     |  gettp TMP0, TMP0
+     |  add.d RA, BASE, RA
+-    |  sltui TMP0, TMP0, LJ_TISTRUECOND		// TMP0=1 true; TMP0=0 false
++    |  sltui TMP0, TMP0, LJ_TISTRUECOND	// TMP0=1 true; TMP0=0 false
+     |  decode_BC4b TMP2
+     |  addu16i.d TMP3, r0, -0x2		// -BCBIAS_J*4
+     |  ld.d CRET1, 0(RD)
+@@ -2949,7 +2946,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |  sltui TMP3, CARG3, LJ_TISNUM
+     |  slli.d TMP1, TMP1, 32
+     |  beqz TMP3, ->vmeta_unm
+-    |  xor TMP0, TMP0, TMP1     // sign => ~sign
++    |  xor TMP0, TMP0, TMP1		// sign => ~sign
+     |2:
+     |  st.d TMP0, 0(RA)
+     |  ins_next
+@@ -3040,7 +3037,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |  ins_next2
+     |.endmacro
+     |
+-    |.macro ins_arithead, itype1, itype2, tval1, tval2 
++    |.macro ins_arithead, itype1, itype2, tval1, tval2
+     |  ld.d tval1, 0(RB)
+     |  ld.d tval2, 0(RC)
+     |  // Check for two integers.
+@@ -3107,7 +3104,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |1:  // Check for two numbers.
+     |  ins_arithfp, fpins, TMP0, TMP1
+     |.endmacro
+-    
++
+   case BC_ADDVN: case BC_ADDNV: case BC_ADDVV:
+     |  ins_arithdn add.w, fadd.d
+     break;
+@@ -3209,7 +3206,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+   case BC_KPRI:
+     |  // RA = dst*8, RD = primitive_type*8 (~)
+     |  add.d RA, BASE, RA
+-    |  slli.d TMP0, RD, 44	// 44+3
++    |  slli.d TMP0, RD, 44		// 44+3
+     |  nor TMP0, TMP0, r0
+     |  st.d TMP0, 0(RA)
+     |  ins_next
+@@ -3260,7 +3257,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |  or TMP3, TMP3, TMP0
+     |  addi.d TMP0, r0, LJ_GC_BLACK|1
+     |  addi.d TMP2, TMP2, -(LJ_TNUMX+1)
+-    |  beq TMP3, TMP0, >2			// Upvalue is closed and black?
++    |  beq TMP3, TMP0, >2		// Upvalue is closed and black?
+     |1:
+     |  ins_next
+     |
+@@ -3298,7 +3295,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |
+     |2:  // Check if string is white and ensure upvalue is closed.
+     |  beqz TMP2, <1
+-    |  andi TMP0, TMP3, LJ_GC_WHITES     // iswhite(str)
++    |  andi TMP0, TMP3, LJ_GC_WHITES	// iswhite(str)
+     |  beqz TMP0, <1
+     |  // Crossed a write barrier. Move the barrier forward.
+     |  .ADD16I CARG1, DISPATCH, GG_DISP2G
+@@ -3392,7 +3389,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     } else {
+       |  sub.d TMP1, KBASE, RD
+       |  or CARG1, L, r0
+-      |  ld.d CARG2, -8(TMP1)            // KBASE-8-str_const*8
++      |  ld.d CARG2, -8(TMP1)		// KBASE-8-str_const*8
+       |  bl extern lj_tab_dup		// (lua_State *L, Table *kt)
+       |  // Returns Table *.
+     }
+@@ -3417,7 +3414,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |  // RA = src*8, RD = str_const*8 (~)
+     |  ld.d LFUNC:TMP0, FRAME_FUNC(BASE)
+     |  sub.d TMP1, KBASE, RD
+-    |  ld.d STR:RC, -8(TMP1)	// KBASE-8-str_const*8
++    |  ld.d STR:RC, -8(TMP1)		// KBASE-8-str_const*8
+     |  cleartp LFUNC:TMP0
+     |  ld.d TAB:RB, LFUNC:TMP0->env
+     |  add.d RA, BASE, RA
+@@ -3675,7 +3672,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |  or CARG2, TAB:RB, r0
+     |  st.d PC, SAVE_PC(sp)
+     |  or CARG1, L, r0
+-    |  bl extern lj_tab_newkey	// (lua_State *L, GCtab *t, TValue *k
++    |  bl extern lj_tab_newkey		// (lua_State *L, GCtab *t, TValue *k
+     |  // Returns TValue *.
+     |  ld.d BASE, L->base
+     |  fst.d FTMP0, 0(CRET1)
+@@ -3787,10 +3784,10 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |  st.d PC, SAVE_PC(sp)
+     |  or BASE, RD, r0
+     |  or CARG1, L, r0
+-    |  bl extern lj_tab_reasize	// (lua_State *L, GCtab *t, int nasize)
++    |  bl extern lj_tab_reasize		// (lua_State *L, GCtab *t, int nasize)
+     |  // Must not reallocate the stack.
+     |  or RD, BASE, r0
+-    |  ld.d BASE, L->base        // Reload BASE for lack of a saved register.
++    |  ld.d BASE, L->base		// Reload BASE for lack of a saved register.
+     |  b <1
+     |
+     |7:  // Possible table write barrier for any value. Skip valiswhite check.
+@@ -3839,7 +3836,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |  xori TMP2, TMP1, FRAME_VARG
+     |  bnez TMP0, >7
+     |1:
+-    |  st.d LFUNC:RB, FRAME_FUNC(BASE)		// Copy function down, but keep PC.
++    |  st.d LFUNC:RB, FRAME_FUNC(BASE)	// Copy function down, but keep PC.
+     |  sltui CARG4, TMP3, 2		// (> FF_C) Calling a fast function?
+     |  or TMP2, BASE, r0
+     |  or RB, CARG3, r0
+@@ -3865,12 +3862,12 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |  ld.d TMP1, -32(TMP1)
+     |  cleartp LFUNC:TMP1
+     |  ld.d TMP1, LFUNC:TMP1->pc
+-    |  ld.d KBASE, PC2PROTO(k)(TMP1)     // Need to prepare KBASE.
++    |  ld.d KBASE, PC2PROTO(k)(TMP1)	// Need to prepare KBASE.
+     |  b <4
+     |
+     |7:  // Tailcall from a vararg function.
+     |  andi CARG4, TMP2, FRAME_TYPEP
+-    |  sub.d TMP2, BASE, TMP2          // Relocate BASE down.
++    |  sub.d TMP2, BASE, TMP2		// Relocate BASE down.
+     |  bnez CARG4, <1			// Vararg frame below?
+     |  or BASE, TMP2, r0
+     |  ld.d TMP1, FRAME_PC(TMP2)
+@@ -3880,7 +3877,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+ 
+   case BC_ITERC:
+     |  // RA = base*8, (RB = (nresults+1)*8, RC = (nargs+1)*8 ((2+1)*8))
+-    |  or TMP2, BASE, r0			// Save old BASE for vmeta_call.
++    |  or TMP2, BASE, r0		// Save old BASE for vmeta_call.
+     |  add.d BASE, BASE, RA
+     |  ld.d RB, -24(BASE)		//A, A+1, A+2 = A-3, A-2, A-1.
+     |  ld.d CARG1, -16(BASE)
+@@ -3902,7 +3899,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |->vm_IITERN:
+     |  add.d RA, BASE, RA
+     |  ld.d TAB:RB, -16(RA)
+-    |  ld.w RC, -8(RA)		// Get index from control var.
++    |  ld.w RC, -8(RA)			// Get index from control var.
+     |  cleartp TAB:RB
+     |  addi.d PC, PC, 4
+     |  ld.w TMP0, TAB:RB->asize
+@@ -3923,7 +3920,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |  addu16i.d TMP3, r0, -0x2		// -BCBIAS_J*4
+     |  decode_BC4b RD
+     |  add.d RD, RD, TMP3
+-    |  st.w RC, -8(RA)		// Update control var.
++    |  st.w RC, -8(RA)			// Update control var.
+     |  add.d PC, PC, RD
+     |3:
+     |  ins_next
+@@ -3950,8 +3947,8 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |  decode_BC4b RD
+     |  add.w RD, RD, TMP3
+     |  st.d CARG2, 0(RA)
+-    |   add.d PC, PC, RD
+-    |  st.w RC, -8(RA)                // Update control var.
++    |  add.d PC, PC, RD
++    |  st.w RC, -8(RA)			// Update control var.
+     |  b <3
+     break;
+ 
+@@ -3972,11 +3969,11 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |  or TMP3, CARG2, CARG3
+     |  addi.d TMP1, TMP1, -FF_next_N
+     |  or TMP3, TMP3, TMP1
+-    |  addu16i.d TMP1, r0, 0xfffe		// LJ_KEYINDEX >> 16
++    |  addu16i.d TMP1, r0, 0xfffe	// LJ_KEYINDEX >> 16
+     |  bnez TMP3, >5
+     |  add.d PC, TMP0, TMP2
+     |  slli.d TMP1, TMP1, 16
+-    |  addu16i.d TMP1, TMP1, 0x7fff		// LJ_KEYINDEX & 0xffff
++    |  addu16i.d TMP1, TMP1, 0x7fff	// LJ_KEYINDEX & 0xffff
+     |  slli.d TMP1, TMP1, 16
+     |  st.d TMP1, -8(RA)
+     |1:
+@@ -4192,9 +4189,9 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |  // RA = base*8, RD = target (after end of loop or start of loop)
+     vk = (op == BC_IFORL || op == BC_JFORL);
+     |  add.d RA, BASE, RA
+-    |  ld.d CARG1, FORL_IDX*8(RA)		// CARG1 = IDX
+-    |  ld.d CARG2, FORL_STEP*8(RA)		// CARG2 = STEP
+-    |  ld.d CARG3, FORL_STOP*8(RA)		// CARG3 = STOP
++    |  ld.d CARG1, FORL_IDX*8(RA)	// CARG1 = IDX
++    |  ld.d CARG2, FORL_STEP*8(RA)	// CARG2 = STEP
++    |  ld.d CARG3, FORL_STOP*8(RA)	// CARG3 = STOP
+     |  gettp CARG4, CARG1
+     |  gettp CARG5, CARG2
+     |  gettp CARG6, CARG3
+@@ -4268,8 +4265,8 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+       |  and TMP3, TMP3, TMP1
+       |  and TMP0, TMP0, TMP3
+       |  beqz TMP0, ->vmeta_for		// if start or step or stop isn't number
+-      |  fcmp.clt.d FCC0, FTMP0, FTMP1		// start < stop ?
+-      |  fcmp.clt.d FCC1, FTMP1, FTMP0		// stop < start ?
++      |  fcmp.clt.d FCC0, FTMP0, FTMP1	// start < stop ?
++      |  fcmp.clt.d FCC1, FTMP1, FTMP0	// stop < start ?
+       |  movcf2fr FTMP3, FCC0
+       |  movcf2fr FTMP4, FCC1
+       |  movfr2cf FCC0, FTMP2
+@@ -4278,8 +4275,8 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+       |  b <1
+     } else {
+       |  fld.d FTMP3, FORL_STEP*8(RA)
+-      |  fadd.d FTMP0, FTMP0, FTMP3		// start + step
+-      |  fcmp.clt.d FCC0, FTMP0, FTMP1		// start + step < stop ?
++      |  fadd.d FTMP0, FTMP0, FTMP3	// start + step
++      |  fcmp.clt.d FCC0, FTMP0, FTMP1	// start + step < stop ?
+       |  fcmp.clt.d FCC1, FTMP1, FTMP0
+       |  movcf2fr FTMP3, FCC0
+       |  movcf2fr FTMP4, FCC1
+@@ -4381,10 +4378,10 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |  ld.bu TMP1, -4+PC2PROTO(numparams)(PC)
+     |  ld.d KBASE, -4+PC2PROTO(k)(PC)
+     |  sltu TMP0, TMP2, RA
+-    |  slli.w TMP1, TMP1, 3			// numparams*8
++    |  slli.w TMP1, TMP1, 3		// numparams*8
+     |  bnez TMP0, ->vm_growstack_l
+     |2:
+-    |  sltu TMP0, NARGS8:RC, TMP1		// Check for missing parameters.
++    |  sltu TMP0, NARGS8:RC, TMP1	// Check for missing parameters.
+     |  bnez TMP0, >3
+     if (op == BC_JFUNCF) {
+       |  decode_RD RD, INS
+@@ -4419,7 +4416,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |  addi.d TMP3, RC, 16+FRAME_VARG
+     |  sltu TMP0, TMP0, TMP2
+     |  ld.d KBASE, -4+PC2PROTO(k)(PC)
+-    |  st.d TMP3, 8(TMP1)                // Store delta + FRAME_VARG.
++    |  st.d TMP3, 8(TMP1)		// Store delta + FRAME_VARG.
+     |  beqz TMP0, ->vm_growstack_l
+     |  ld.bu TMP2, -4+PC2PROTO(numparams)(PC)
+     |  or RA, BASE, r0
+@@ -4429,13 +4426,13 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |  beqz TMP2, >2
+     |1:
+     |  ld.d TMP0, 0(RA)
+-    |  sltu CARG2, RA, RC			// Less args than parameters?
++    |  sltu CARG2, RA, RC		// Less args than parameters?
+     |  or CARG1, TMP0, r0
+     |  addi.d RA, RA, 8
+     |  addi.d TMP1, TMP1, 8
+     |  addi.w TMP2, TMP2, -1
+     |  beqz CARG2, >3
+-    |  masknez TMP3, CARG1, CARG2		// Clear old fixarg slot (help the GC).
++    |  masknez TMP3, CARG1, CARG2	// Clear old fixarg slot (help the GC).
+     |  maskeqz CARG1, TISNIL, CARG2
+     |  or CARG1, CARG1, TMP3
+     |  st.d CARG1, -8(RA)
+@@ -4444,7 +4441,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |2:
+     |  ins_next2
+     |3:
+-    |  maskeqz TMP0, TMP0, CARG2		// Clear missing fixargs.
++    |  maskeqz TMP0, TMP0, CARG2	// Clear missing fixargs.
+     |  masknez TMP3, TISNIL, CARG2
+     |  or TMP0, TMP0, TMP3
+     |  st.d TMP0, 8(TMP1)

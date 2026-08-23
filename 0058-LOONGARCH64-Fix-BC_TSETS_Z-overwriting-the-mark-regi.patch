@@ -1,0 +1,26 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Huang Qiqi <huangqiqi@loongson.cn>
+Date: Tue, 25 Feb 2025 16:25:16 +0800
+Subject: [PATCH 58/91] LOONGARCH64: Fix BC_TSETS_Z overwriting the mark
+ register during the write barrier
+
+---
+ src/vm_loongarch64.dasc | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/vm_loongarch64.dasc b/src/vm_loongarch64.dasc
+index 60e2acb6..e53c53b7 100644
+--- a/src/vm_loongarch64.dasc
++++ b/src/vm_loongarch64.dasc
+@@ -3597,9 +3597,9 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |  ld.d TAB:TMP0, TAB:RB->metatable
+     |  beq CARG2, TISNIL, >4		// Key found, but nil value?
+     |2:
+-    |  andi TMP3, TMP3, LJ_GC_BLACK	// isblack(table)
++    |  andi TMP4, TMP3, LJ_GC_BLACK	// isblack(table)
+     |  fst.d FTMP0, NODE:TMP2->val
+-    |  bnez TMP3, >7
++    |  bnez TMP4, >7
+     |3:
+     |  ins_next
+     |

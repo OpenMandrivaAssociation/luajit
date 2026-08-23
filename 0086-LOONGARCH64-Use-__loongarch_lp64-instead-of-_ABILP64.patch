@@ -1,0 +1,26 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Guoqi Chen <chenguoqi@loongson.cn>
+Date: Wed, 25 Mar 2026 11:17:25 +0800
+Subject: [PATCH 86/91] LOONGARCH64: Use __loongarch_lp64 instead of _ABILP64
+
+_ABILP64 is a legacy macro definition, which is not supported in all compilers.
+It should use the macro definition __loongarch_lp64 specified in spec [1].
+
+[1]: https://github.com/loongson/la-toolchain-conventions
+---
+ src/lj_arch.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/lj_arch.h b/src/lj_arch.h
+index 217bcbcd..a70691eb 100644
+--- a/src/lj_arch.h
++++ b/src/lj_arch.h
+@@ -619,7 +619,7 @@
+ #error "Only RISC-V 64 double float supported for now"
+ #endif
+ #elif LJ_TARGET_LOONGARCH64
+-#if !(defined(_ABILP64) && _LOONGARCH_SIM == _ABILP64)
++#if !defined(__loongarch_lp64)
+ #error "Only LOONGARCH lp64d ABI is supported"
+ #undef LJ_TARGET_LOONGARCH64
+ #endif

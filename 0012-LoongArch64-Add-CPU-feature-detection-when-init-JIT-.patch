@@ -1,0 +1,24 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Xiaolin Zhao <zhaoxiaolin@loongson.cn>
+Date: Wed, 27 Jul 2022 18:02:20 +0800
+Subject: [PATCH 12/91] LoongArch64: Add CPU feature detection when init JIT
+ compiler
+
+---
+ src/lib_jit.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/lib_jit.c b/src/lib_jit.c
+index 1caf92ba..431de3bd 100644
+--- a/src/lib_jit.c
++++ b/src/lib_jit.c
+@@ -843,6 +843,9 @@ static uint32_t jit_cpudetect(void)
+   /* Detect V/P? */
+   /* V have no hardware available, P not ratified yet. */
+ #endif
++#elif LJ_TARGET_LOONGARCH64
++
++  /* No optional CPU features to detect (for now). */
+ 
+ #else
+ #error "Missing CPU detection for this architecture"

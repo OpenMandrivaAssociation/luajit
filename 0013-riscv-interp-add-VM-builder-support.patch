@@ -1,0 +1,73 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: gns <wangbingzhen.riscv@isrc.iscas.ac.cn>
+Date: Tue, 11 Aug 2026 20:36:09 +0800
+Subject: [PATCH 13/21] riscv(interp): add VM builder support
+
+Co-authored-by: Heinrich Schuchardt <heinrich.schuchardt@canonical.com>
+---
+ src/host/buildvm.c     |  2 ++
+ src/host/buildvm_asm.c | 31 +++++++++++++++++++++++++++++++
+ 2 files changed, 33 insertions(+)
+
+diff --git a/src/host/buildvm.c b/src/host/buildvm.c
+index 27f90066..f8e54ce7 100644
+--- a/src/host/buildvm.c
++++ b/src/host/buildvm.c
+@@ -67,6 +67,8 @@ static int collect_reloc(BuildCtx *ctx, uint8_t *addr, int idx, int type);
+ #include "../dynasm/dasm_ppc.h"
+ #elif LJ_TARGET_MIPS
+ #include "../dynasm/dasm_mips.h"
++#elif LJ_TARGET_RISCV64
++#include "../dynasm/dasm_riscv.h"
+ #else
+ #error "No support for this architecture (yet)"
+ #endif
+diff --git a/src/host/buildvm_asm.c b/src/host/buildvm_asm.c
+index 8cd8727b..4ae5e185 100644
+--- a/src/host/buildvm_asm.c
++++ b/src/host/buildvm_asm.c
+@@ -156,6 +156,34 @@ static void emit_asm_wordreloc(BuildCtx *ctx, uint8_t *p, int n,
+ 	  "Error: unsupported opcode %08x for %s symbol relocation.\n",
+ 	  ins, sym);
+   exit(1);
++#elif LJ_TARGET_RISCV64
++  if ((ins & 0x7f) == 0x17u) {
++    fprintf(ctx->fp, "\tauipc x%d, %s\n", (ins >> 7) & 31, sym);
++  } else if ((ins & 0x7f) == 0x67u) {
++    fprintf(ctx->fp, "\tjalr x%d, x%d, %s\n", (ins >> 7) & 31, (ins >> 15) & 31, sym);
++  } else if ((ins & 0x7f) == 0x6fu) {
++    fprintf(ctx->fp, "\tjal x%d, %s\n", (ins >> 7) & 31, sym);
++  } else if ((ins & 0x7f) == 0x03u) {
++    uint8_t funct3 = (ins >> 12) & 7;
++    uint8_t rd = (ins >> 7) & 31, rs1 = (ins >> 15) & 31;
++    switch (funct3) {
++      case 0: fprintf(ctx->fp, "\tlb"); break;
++      case 1: fprintf(ctx->fp, "\tlh"); break;
++      case 2: fprintf(ctx->fp, "\tlw"); break;
++      case 3: fprintf(ctx->fp, "\tld"); break;
++      case 4: fprintf(ctx->fp, "\tlbu"); break;
++      case 5: fprintf(ctx->fp, "\tlhu"); break;
++      case 6: fprintf(ctx->fp, "\tlwu"); break;
++      default: goto rv_reloc_err;
++    }
++    fprintf(ctx->fp, " x%d, %s(x%d)\n", rd, sym, rs1);
++  } else {
++rv_reloc_err:
++    fprintf(stderr,
++  	    "Error: unsupported opcode %08x for %s symbol relocation.\n",
++  	    ins, sym);
++    exit(1);
++  }
+ #else
+ #error "missing relocation support for this architecture"
+ #endif
+@@ -248,6 +276,9 @@ void emit_asm(BuildCtx *ctx)
+ #endif
+ #if LJ_TARGET_MIPS
+   fprintf(ctx->fp, "\t.set nomips16\n\t.abicalls\n\t.set noreorder\n\t.set nomacro\n");
++#endif
++#if LJ_TARGET_RISCV64
++  fprintf(ctx->fp, ".option norvc\n.option norelax\n");
+ #endif
+   emit_asm_align(ctx, 4);
+ 

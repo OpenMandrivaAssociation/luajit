@@ -1,0 +1,22 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Huang Qiqi <huangqiqi@loongson.cn>
+Date: Thu, 5 Jun 2025 18:04:45 +0800
+Subject: [PATCH 80/91] LOONGARCH64: Fixed data loss in number type caused by
+ 32-bit sign extension in BC_UNM
+
+---
+ src/vm_loongarch64.dasc | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/src/vm_loongarch64.dasc b/src/vm_loongarch64.dasc
+index 6f5378eb..e253a4c1 100644
+--- a/src/vm_loongarch64.dasc
++++ b/src/vm_loongarch64.dasc
+@@ -2875,7 +2875,6 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |  ld.d TMP0, 0(RB)
+     |  addu16i.d TMP1, r0, 0x8000
+     |  gettp CARG3, TMP0
+-    |  slli.w TMP0, TMP0, 0
+     |  bne CARG3, TISNUM, >1
+     |  beq TMP0, TMP1, ->vmeta_unm      // Meta handler deals with -2^31.
+     |  sub.w TMP0, r0, TMP0

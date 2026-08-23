@@ -1,0 +1,24 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Huang Qiqi <huangqiqi@loongson.cn>
+Date: Thu, 16 Jan 2025 11:11:51 +0800
+Subject: [PATCH 56/91] LOONGARCH64: Optimize the BC_KNUM
+
+---
+ src/vm_loongarch64.dasc | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/vm_loongarch64.dasc b/src/vm_loongarch64.dasc
+index 77c63ba6..69c3c8d9 100644
+--- a/src/vm_loongarch64.dasc
++++ b/src/vm_loongarch64.dasc
+@@ -3158,8 +3158,9 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |  add.d RD, KBASE, RD
+     |  add.d RA, BASE, RA
+     |  ld.d TMP0, 0(RD)
++    |  ins_next1
+     |  st.d TMP0, 0(RA)
+-    |  ins_next
++    |  ins_next2
+     break;
+   case BC_KPRI:
+     |  // RA = dst*8, RD = primitive_type*8 (~)

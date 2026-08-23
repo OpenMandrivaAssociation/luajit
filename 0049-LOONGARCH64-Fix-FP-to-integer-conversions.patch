@@ -1,0 +1,24 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Huang Qiqi <huangqiqi@loongson.cn>
+Date: Mon, 6 Jan 2025 15:12:54 +0800
+Subject: [PATCH 49/91] LOONGARCH64: Fix FP to integer conversions
+
+---
+ src/lj_asm_loongarch64.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/lj_asm_loongarch64.h b/src/lj_asm_loongarch64.h
+index 099c668f..c92b3648 100644
+--- a/src/lj_asm_loongarch64.h
++++ b/src/lj_asm_loongarch64.h
+@@ -565,8 +565,8 @@ static void asm_conv(ASMState *as, IRIns *ir)
+ 	LOONGIns loongi = irt_is64(ir->t) ?
+ 	  (st == IRT_NUM ? LOONGI_FTINTRZ_L_D : LOONGI_FTINTRZ_L_S) :
+ 	  (st == IRT_NUM ? LOONGI_FTINTRZ_W_D : LOONGI_FTINTRZ_W_S);
+-	emit_dj(as, irt_is64(ir->t) ? LOONGI_MOVFR2GR_D : LOONGI_MOVFR2GR_S, dest, left);
+-	emit_dj(as, loongi, left, left);
++	emit_dj(as, irt_is64(ir->t) ? LOONGI_MOVFR2GR_D : LOONGI_MOVFR2GR_S, dest, tmp);
++	emit_dj(as, loongi, tmp, left);
+       }
+     }
+   } else {

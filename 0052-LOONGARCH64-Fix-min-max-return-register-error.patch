@@ -1,0 +1,45 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Huang Qiqi <huangqiqi@loongson.cn>
+Date: Wed, 8 Jan 2025 11:17:14 +0800
+Subject: [PATCH 52/91] LOONGARCH64: Fix min/max return register error
+
+---
+ src/vm_loongarch64.dasc | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/src/vm_loongarch64.dasc b/src/vm_loongarch64.dasc
+index 2f05cb40..d1875058 100644
+--- a/src/vm_loongarch64.dasc
++++ b/src/vm_loongarch64.dasc
+@@ -1664,7 +1664,7 @@ static void build_subroutines(BuildCtx *ctx)
+   |  movgr2fr.w FTMP3, CARG1
+   |  checknum CARG2, ->fff_fallback
+   |  ffint.d.w FTMP3, FTMP3
+-  |  fld.d FTMP4, 0(TMP2)
++  |  fld.d FARG1, 0(TMP2)
+   |  b >6
+   |
+   |4:
+@@ -1672,18 +1672,18 @@ static void build_subroutines(BuildCtx *ctx)
+   |  checknum CARG1, ->fff_fallback
+   |5:  // Handle numbers.
+   |  ld.d CARG2, 0(TMP2)
+-  |  fld.d FTMP4, 0(TMP2)
+   |  beq TMP2, TMP3, ->fff_resn
++  |  fld.d FARG1, 0(TMP2)
+   |  checknum CARG2, >7
+   |6:
+-  |  fpins FTMP3, FTMP3, FTMP4
++  |  fpins FRET1, FTMP3, FARG1		// Both FRET1 and FARG1 are f0.
+   |  addi.d TMP2, TMP2, 8
+   |  b <5
+   |
+   |7:  // Convert integer to number and continue with number loop.
+-  |  movgr2fr.w FTMP4, CARG2
++  |  movgr2fr.w FARG1, CARG2
+   |  checkint CARG2, ->fff_fallback
+-  |  ffint.d.w FTMP4, FTMP4
++  |  ffint.d.w FARG1, FARG1
+   |  b <6
+   |.endmacro
+   |

@@ -1,0 +1,106 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Huang Qiqi <huangqiqi@loongson.cn>
+Date: Thu, 22 Aug 2024 16:32:41 +0800
+Subject: [PATCH 23/91] LOONGARCH64: Optimize function that moves i32 constant
+ to reg
+
+Change-Id: Ifaded4134f9395404757b2db18a0b071344c0aad
+---
+ src/lj_asm_loongarch64.h  |  8 ++++----
+ src/lj_emit_loongarch64.h | 28 ++++++++++++++--------------
+ 2 files changed, 18 insertions(+), 18 deletions(-)
+
+diff --git a/src/lj_asm_loongarch64.h b/src/lj_asm_loongarch64.h
+index e81d8cf3..79b2f07b 100644
+--- a/src/lj_asm_loongarch64.h
++++ b/src/lj_asm_loongarch64.h
+@@ -53,7 +53,7 @@ static void asm_exitstub_setup(ASMState *as)
+     --as->mcp;
+   /* st.w TMP, sp, 0; li TMP, traceno; jirl ->vm_exit_handler;*/
+   *--mxp = LOONGI_JIRL | RID_R0 | LOONGF_J(RID_R20) | 0<<10;
+-  emit_dj32i(as, RID_TMP, RID_ZERO, as->T->traceno);
++  emit_loadi(as, RID_TMP, as->T->traceno);
+   *--mxp = *as->mcp;
+   *--mxp = LOONGI_LU52I_D | RID_R20 | LOONGF_J(RID_R20)
+             | LOONGF_I((((uintptr_t)(void *)lj_vm_exit_handler)>>52)&0xfff);
+@@ -792,7 +792,7 @@ static void asm_href(ASMState *as, IRIns *ir, IROp merge)
+   }
+   if (irt_isnum(kt)) {
+     emit_branch21(as, LOONGI_BCNEZ, 0, l_end);
+-    emit_dj32i(as, RID_TMP, RID_ZERO, as->snapno);
++    emit_loadi(as, RID_TMP, as->snapno);
+     emit_djk(as, LOONGI_FCMP_CEQ_D, 0, tmpnum, key);
+     emit_branch(as, LOONGI_BEQ, tmp1, RID_ZERO, l_next);
+     emit_dju(as, LOONGI_SLTUI, tmp1, tmp1, ((int32_t)LJ_TISNUM)&0xfff);
+@@ -800,7 +800,7 @@ static void asm_href(ASMState *as, IRIns *ir, IROp merge)
+     emit_dj(as, LOONGI_MOVGR2FR_D, tmpnum, tmp1);
+   } else {
+     emit_branch(as, LOONGI_BEQ, tmp1, cmp64, l_end);
+-    emit_dj32i(as, RID_TMP, RID_ZERO, as->snapno);
++    emit_loadi(as, RID_TMP, as->snapno);
+   }
+   emit_dji(as, LOONGI_LD_D, tmp1, dest, (int32_t)offsetof(Node, key.u64)&0xfff);
+   *l_loop = LOONGI_BNE | LOONGF_J(tmp1) | LOONGF_D(RID_ZERO) | LOONGF_I(((as->mcp-l_loop) & 0xffffu));
+@@ -1252,7 +1252,7 @@ static void asm_cnew(ASMState *as, IRIns *ir)
+   emit_dji(as, LOONGI_ST_B, RID_RET+1, RID_RET, (offsetof(GCcdata, gct))&0xfff);
+   emit_dji(as, LOONGI_ST_H, RID_TMP, RID_RET, (offsetof(GCcdata, ctypeid))&0xfff);
+   emit_dji(as, LOONGI_ADDI_D, RID_RET+1, RID_ZERO, ~LJ_TCDATA&0xfff);
+-  emit_dj32i(as, RID_TMP, RID_ZERO, id);
++  emit_loadi(as, RID_TMP, id);
+   args[0] = ASMREF_L;     /* lua_State *L */
+   args[1] = ASMREF_TMP1;  /* MSize size   */
+   asm_gencall(as, ci, args);
+diff --git a/src/lj_emit_loongarch64.h b/src/lj_emit_loongarch64.h
+index 1484a177..ad765384 100644
+--- a/src/lj_emit_loongarch64.h
++++ b/src/lj_emit_loongarch64.h
+@@ -53,17 +53,6 @@ static Reg ra_allock(ASMState *as, intptr_t k, RegSet allow);
+ static void ra_allockreg(ASMState *as, intptr_t k, Reg r);
+ static Reg ra_scratch(ASMState *as, RegSet allow);
+ 
+-static void emit_dj32i(ASMState *as, Reg rd, Reg rj, int32_t i)
+-{
+-  if (checki12(i)) {
+-    *--as->mcp = LOONGI_ADDI_D | LOONGF_D(rd) | LOONGF_J(rj) | LOONGF_I(i&0xfff);
+-  } else {
+-    emit_djk(as, LOONGI_ADD_D, rd, RID_R20, rj);
+-    emit_dju(as, LOONGI_ORI, RID_R20, RID_R20, i&0xfff);
+-    emit_di(as, LOONGI_LU12I_W, RID_R20, (i>>12)&0xfffff);
+-  }
+-}
+-
+ static void emit_d16i(ASMState *as, Reg rd, int32_t i)
+ {
+   emit_dji(as, LOONGI_SRAI_D, rd, rd, 16);
+@@ -92,17 +81,28 @@ static void emit_b_bl(ASMState *as, LOONGIns loongi, uint32_t i)
+ #define emit_canremat(ref)	((ref) <= REF_BASE)
+ 
+ 
+-/* Load a 32 bit constant into a GPR. */
++/* Load a signed 32 bit constant into a GPR. */
++static void emit_loads32(ASMState *as, Reg r, int32_t i)
++{
++  emit_dju(as, LOONGI_ORI, r, r, i&0xfff);
++  emit_di(as, LOONGI_LU12I_W, r, (i>>12)&0xfffff);
++}
++
++/* Load a int type value into a GPR. */
+ static void emit_loadi(ASMState *as, Reg r, int32_t i)
+ {
+-  emit_dj32i(as, r, RID_ZERO, i);
++  if (checki12(i)) {
++    *--as->mcp = LOONGI_ADDI_D | LOONGF_D(r) | RID_ZERO | LOONGF_I(i&0xfff);
++  } else {
++    emit_loads32(as, r, i);
++  }
+ }
+ 
+ /* Load a 64 bit constant into a GPR. */
+ static void emit_loadu64(ASMState *as, Reg r, uint64_t u64)
+ {
+   if (checki32((int64_t)u64)) {
+-    emit_dj32i(as, r, RID_ZERO, (int32_t)u64);
++    emit_loadi(as, r, (int32_t)u64);
+   } else {
+       *--as->mcp = LOONGI_LU52I_D | LOONGF_D(r) | LOONGF_J(r) | LOONGF_I((u64>>52)&0xfff);
+       *--as->mcp = LOONGI_LU32I_D | LOONGF_D(r) | LOONGF_I20((u64>>32)&0xfffff);

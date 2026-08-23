@@ -1,0 +1,26 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: huangqiqi <huangqiqi@loongson.cn>
+Date: Thu, 5 Jun 2025 17:03:32 +0800
+Subject: [PATCH 78/91] LOONGARCH64: Fixed ffi_callback to ensure global_State
+ is relocated to GL
+
+---
+ src/vm_loongarch64.dasc | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/src/vm_loongarch64.dasc b/src/vm_loongarch64.dasc
+index 7c3c5303..a3f587d0 100644
+--- a/src/vm_loongarch64.dasc
++++ b/src/vm_loongarch64.dasc
+@@ -2383,8 +2383,9 @@ static void build_subroutines(BuildCtx *ctx)
+   |.if FFI
+   |.type CTSTATE, CTState, PC
+   |  saveregs
+-  |  ld.d CTSTATE, GL:r17->ctype_state
+-  |  add32i_d DISPATCH, r17, GG_G2DISP
++  |  or GL, r17, r0
++  |  ld.d CTSTATE, GL->ctype_state
++  |  add32i_d DISPATCH, GL, GG_G2DISP
+   |  st.w r19, CTSTATE->cb.slot
+   |  st.d CARG1, CTSTATE->cb.gpr[0]
+   |  fst.d FARG1, CTSTATE->cb.fpr[0]

@@ -1,0 +1,43 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: gns <wangbingzhen.riscv@isrc.iscas.ac.cn>
+Date: Tue, 11 Aug 2026 20:36:09 +0800
+Subject: [PATCH 10/21] riscv(jit): add mandatory constants
+
+---
+ src/lj_jit.h   | 4 ++--
+ src/lj_trace.c | 2 +-
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/lj_jit.h b/src/lj_jit.h
+index b0e28703..23cd5066 100644
+--- a/src/lj_jit.h
++++ b/src/lj_jit.h
+@@ -403,13 +403,13 @@ enum {
+ #if LJ_TARGET_MIPS
+   LJ_K64_2P31,		/* 2^31 */
+ #endif
+-#if LJ_TARGET_ARM64 || LJ_TARGET_MIPS64
++#if LJ_TARGET_ARM64 || LJ_TARGET_MIPS64 || LJ_TARGET_RISCV64
+   LJ_K64_VM_EXIT_HANDLER,
+   LJ_K64_VM_EXIT_INTERP,
+ #endif
+   LJ_K64__MAX,
+ };
+-#define LJ_K64__USED	(LJ_TARGET_X86ORX64 || LJ_TARGET_ARM64 || LJ_TARGET_MIPS)
++#define LJ_K64__USED	(LJ_TARGET_X86ORX64 || LJ_TARGET_ARM64 || LJ_TARGET_MIPS || LJ_TARGET_RISCV64)
+ 
+ enum {
+ #if LJ_TARGET_X86ORX64 || LJ_TARGET_MIPS64
+diff --git a/src/lj_trace.c b/src/lj_trace.c
+index 24a1f7e4..de7fe61e 100644
+--- a/src/lj_trace.c
++++ b/src/lj_trace.c
+@@ -349,7 +349,7 @@ void lj_trace_initstate(global_State *g)
+   J->k32[LJ_K32_VM_EXIT_HANDLER] = (uintptr_t)(void *)lj_vm_exit_handler;
+   J->k32[LJ_K32_VM_EXIT_INTERP] = (uintptr_t)(void *)lj_vm_exit_interp;
+ #endif
+-#if LJ_TARGET_ARM64 || LJ_TARGET_MIPS64
++#if LJ_TARGET_ARM64 || LJ_TARGET_MIPS64 || LJ_TARGET_RISCV64
+   J->k64[LJ_K64_VM_EXIT_HANDLER].u64 = (uintptr_t)lj_ptr_sign((void *)lj_vm_exit_handler, 0);
+   J->k64[LJ_K64_VM_EXIT_INTERP].u64 = (uintptr_t)lj_ptr_sign((void *)lj_vm_exit_interp, 0);
+ #endif

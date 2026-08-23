@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Huang Qiqi <huangqiqi@loongson.cn>
+Date: Tue, 7 Jan 2025 19:46:19 +0800
+Subject: [PATCH 51/91] LOONGARCH64: Fix vm_next register dirty read bug
+
+---
+ src/vm_loongarch64.dasc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/vm_loongarch64.dasc b/src/vm_loongarch64.dasc
+index 687910bb..2f05cb40 100644
+--- a/src/vm_loongarch64.dasc
++++ b/src/vm_loongarch64.dasc
+@@ -2378,8 +2378,8 @@ static void build_subroutines(BuildCtx *ctx)
+   |
+   |5:  // Traverse hash part.
+   |  sub.w NEXT_RES_IDX, NEXT_IDX, NEXT_ASIZE
+-  |  ld.d NODE:NEXT_RES_VK, NEXT_TAB->node
+   |  ld.w NEXT_TMP0, NEXT_TAB->hmask
++  |  ld.d NODE:NEXT_RES_VK, NEXT_TAB->node	// Both NEXT_TAB and NEXT_RES_VK are CARG1.
+   |  slli.w NEXT_TMP2, NEXT_RES_IDX, 5
+   |  slli.w TMP3, NEXT_RES_IDX, 3
+   |  sub.w TMP3, NEXT_TMP2, TMP3

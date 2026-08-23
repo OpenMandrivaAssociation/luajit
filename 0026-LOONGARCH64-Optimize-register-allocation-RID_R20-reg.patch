@@ -1,0 +1,194 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Huang Qiqi <huangqiqi@loongson.cn>
+Date: Mon, 26 Aug 2024 10:46:37 +0800
+Subject: [PATCH 26/91] LOONGARCH64: Optimize register allocation, RID_R20
+ register is no longer used as a fixed temporary register
+
+Change-Id: I1c6b0e2c389ce4880c82dcc5a72bf97a7d3ff73a
+---
+ src/lj_asm_loongarch64.h    | 38 ++++++++++++++++---------------------
+ src/lj_emit_loongarch64.h   | 38 ++++++++++++++++++++++++-------------
+ src/lj_target_loongarch64.h |  5 ++---
+ 3 files changed, 43 insertions(+), 38 deletions(-)
+
+diff --git a/src/lj_asm_loongarch64.h b/src/lj_asm_loongarch64.h
+index 9e4b7198..abbf5ef6 100644
+--- a/src/lj_asm_loongarch64.h
++++ b/src/lj_asm_loongarch64.h
+@@ -52,17 +52,13 @@ static void asm_exitstub_setup(ASMState *as)
+   if (as->mcp == mxp)
+     --as->mcp;
+   /* st.w TMP, sp, 0; li TMP, traceno; jirl ->vm_exit_handler;*/
+-  *--mxp = LOONGI_JIRL | RID_R0 | LOONGF_J(RID_R20) | 0<<10;
++  mxp--;
++  lj_assertA(((uintptr_t)mxp ^ (uintptr_t)(void *)lj_vm_exit_handler)>>28 == 0,
++	     "branch target out of range");
++  ptrdiff_t delta = ((uintptr_t)(void *)lj_vm_exit_handler - (uintptr_t)mxp)>>2;
++  *mxp = LOONGI_B | LOONGF_I(delta & 0xffffu) | ((delta & 0x3ff0000) >> 16);
+   emit_loadi(as, RID_TMP, as->T->traceno);
+   *--mxp = *as->mcp;
+-  *--mxp = LOONGI_LU52I_D | RID_R20 | LOONGF_J(RID_R20)
+-            | LOONGF_I((((uintptr_t)(void *)lj_vm_exit_handler)>>52)&0xfff);
+-  *--mxp = LOONGI_LU32I_D | RID_R20
+-            | LOONGF_I20((((uintptr_t)(void *)lj_vm_exit_handler)>>32)&0xfffff);
+-  *--mxp = LOONGI_ORI | RID_R20 | LOONGF_J(RID_R20)
+-            | LOONGF_I(((uintptr_t)(void *)lj_vm_exit_handler)&0xfff);
+-  *--mxp = LOONGI_LU12I_W | RID_R20
+-            | LOONGF_I20((((uintptr_t)(void *)lj_vm_exit_handler)&0xfffff000)>>12);
+   *--mxp = LOONGI_ST_W | LOONGF_D(RID_TMP) | LOONGF_J(RID_SP);
+   as->mctop = mxp;
+ }
+@@ -1701,19 +1697,19 @@ static void asm_stack_check(ASMState *as, BCReg topslot,
+   Reg tmp, pbase = irp ? (ra_hasreg(irp->r) ? irp->r : RID_TMP) : RID_BASE;
+   ExitNo oldsnap = as->snapno;
+   rset_clear(allow, pbase);
+-  as->snapno = exitno;
+-  asm_guard(as, LOONGI_BNE, RID_R20, RID_ZERO);
+-  as->snapno = oldsnap;
+   if (allow) {
+     tmp = rset_pickbot(allow);
+     ra_modified(as, tmp);
+-  } else {	// allow == RSET_EMPTY
++  } else {
+     tmp = RID_RET;
+     emit_dji(as, LOONGI_LD_D, tmp, RID_SP, 0);	/* Restore tmp1 register. */
+   }
++  as->snapno = exitno;
++  asm_guard(as, LOONGI_BNE, tmp, RID_ZERO);
++  as->snapno = oldsnap;
+   lj_assertA(checki12(8*topslot), "slot offset %d does not fit in si12", 8*topslot);
+-  emit_dji(as, LOONGI_SLTUI, RID_R20, RID_R20, (int32_t)(8*topslot)&0xfff);
+-  emit_djk(as, LOONGI_SUB_D, RID_R20, tmp, pbase);
++  emit_dji(as, LOONGI_SLTUI, tmp, RID_TMP, (int32_t)(8*topslot)&0xfff);
++  emit_djk(as, LOONGI_SUB_D, RID_TMP, tmp, pbase);
+   emit_dji(as, LOONGI_LD_D, tmp, tmp, offsetof(lua_State, maxstack));
+   if (pbase == RID_TMP)
+     emit_getgl(as, RID_TMP, jit_base);
+@@ -1741,21 +1737,19 @@ static void asm_stack_restore(ASMState *as, SnapShot *snap)
+       continue;
+     if (irt_isnum(ir->t)) {
+       Reg src = ra_alloc1(as, ref, RSET_FPR);
+-      emit_dji(as, LOONGI_FST_D, src, RID_BASE, ofs&0xfff);
++      emit_lso(as, LOONGI_FST_D, src, RID_BASE, ofs, RSET_GPR);
+     } else {
+       if ((sn & SNAP_KEYINDEX)) {
+         RegSet allow = rset_exclude(RSET_GPR, RID_BASE);
+ 	int64_t kki = (int64_t)LJ_KEYINDEX << 32;
+ 	if (irref_isk(ref)) {
+-	  emit_djk(as, LOONGI_STX_D,
++	  emit_lso(as, LOONGI_ST_D,
+ 	           ra_allock(as, kki | (int64_t)(uint32_t)ir->i, allow),
+-		   RID_BASE, RID_R20);
+-	  emit_loadi(as, RID_R20, ofs);
++		   RID_BASE, ofs, allow);
+ 	} else {
+ 	  Reg src = ra_alloc1(as, ref, allow);
+-	  Reg rki = ra_allock(as, kki, rset_exclude(allow, src));
+-	  emit_djk(as, LOONGI_STX_D, RID_TMP, RID_BASE, RID_R20);
+-	  emit_loadi(as, RID_R20, ofs);
++	  Reg rki = ra_allock(as, kki, allow);
++	  emit_lso(as, LOONGI_ST_D, RID_TMP, RID_BASE, ofs, allow);
+ 	  emit_djk(as, LOONGI_ADD_D, RID_TMP, src, rki);
+ 	}
+       } else {
+diff --git a/src/lj_emit_loongarch64.h b/src/lj_emit_loongarch64.h
+index 9a55b446..c063edae 100644
+--- a/src/lj_emit_loongarch64.h
++++ b/src/lj_emit_loongarch64.h
+@@ -117,14 +117,18 @@ static void emit_lsptr(ASMState *as, LOONGIns loongi, Reg r, void *p, RegSet all
+     emit_dji(as, loongi, r, base, ofs&0xfff);
+   } else {
+     /* ld.d->ldx.d, fld.d->fldx.d, ld.s->fldx.s */
+-    if (loongi == LOONGI_LD_D)
++    Reg tmp = r;
++    if (loongi == LOONGI_LD_D) {
+       loongi = LOONGI_LDX_D;
+-    else if (loongi == LOONGI_FLD_D)
++    } else if (loongi == LOONGI_FLD_D) {
++      tmp = ra_scratch(as, RSET_GPR);
+       loongi = LOONGI_FLDX_D;
+-    else if (loongi == LOONGI_FLD_S)
++    } else if (loongi == LOONGI_FLD_S) {
++      tmp = ra_scratch(as, RSET_GPR);
+       loongi = LOONGI_FLDX_S;
+-    emit_djk(as, loongi, r, base, RID_R20);
+-    emit_loads32(as, RID_R20, ofs);
++    }
++    emit_djk(as, loongi, r, base, tmp);
++    emit_loads32(as, tmp, ofs);
+   }
+ }
+ 
+@@ -146,8 +150,12 @@ static void emit_loadk64(ASMState *as, Reg r, IRIns *ir)
+ /* Get/set global_State fields. */
+ static void emit_lsglptr2(ASMState *as, LOONGIns loongi, Reg r, int32_t ofs)
+ {
+-  emit_djk(as, loongi, r, RID_JGL, RID_R20);
+-  emit_loadi(as, RID_R20, (ofs-32768));
++  Reg tmp = r;
++  if (loongi == LOONGI_STX_D) {
++    tmp = ra_scratch(as, RSET_GPR);
++  }
++  emit_djk(as, loongi, r, RID_JGL, tmp);
++  emit_loadi(as, tmp, (ofs-32768));
+ }
+ 
+ #define emit_getgl(as, r, field) \
+@@ -270,12 +278,15 @@ static void emit_loadofs(ASMState *as, IRIns *ir, Reg r, Reg base, int32_t ofs)
+       emit_dji(as, irt_isnum(ir->t) ? LOONGI_FLD_D : LOONGI_FLD_S, r, base, ofs&0xfff);
+     }
+   } else {
++    Reg tmp;
+     if (r < RID_MAX_GPR) {
+-      emit_djk(as, irt_is64(ir->t) ? LOONGI_LDX_D : LOONGI_LDX_W, r, base, RID_R20);
++      tmp = r;
++      emit_djk(as, irt_is64(ir->t) ? LOONGI_LDX_D : LOONGI_LDX_W, r, base, tmp);
+     } else {
+-      emit_djk(as, irt_isnum(ir->t) ? LOONGI_FLDX_D : LOONGI_FLDX_S, r, base, RID_R20);
++      tmp = ra_scratch(as, RSET_GPR);
++      emit_djk(as, irt_isnum(ir->t) ? LOONGI_FLDX_D : LOONGI_FLDX_S, r, base, tmp);
+     }
+-    emit_loads32(as, RID_R20, ofs);
++    emit_loads32(as, tmp, ofs);
+   }
+ }
+ 
+@@ -289,12 +300,13 @@ static void emit_storeofs(ASMState *as, IRIns *ir, Reg r, Reg base, int32_t ofs)
+       emit_dji(as, irt_isnum(ir->t) ? LOONGI_FST_D : LOONGI_FST_S, r, base, ofs&0xfff);
+     }
+   } else {
++    Reg tmp = ra_scratch(as, RSET_GPR);
+     if (r < RID_MAX_GPR) {
+-      emit_djk(as, irt_is64(ir->t) ? LOONGI_STX_D : LOONGI_STX_W, r, base, RID_R20);
++      emit_djk(as, irt_is64(ir->t) ? LOONGI_STX_D : LOONGI_STX_W, r, base, tmp);
+     } else {
+-      emit_djk(as, irt_isnum(ir->t) ? LOONGI_FSTX_D : LOONGI_FSTX_S, (r&31), base, RID_R20);
++      emit_djk(as, irt_isnum(ir->t) ? LOONGI_FSTX_D : LOONGI_FSTX_S, r, base, tmp);
+     }
+-    emit_loads32(as, RID_R20, ofs);
++    emit_loads32(as, tmp, ofs);
+   }
+ }
+ 
+diff --git a/src/lj_target_loongarch64.h b/src/lj_target_loongarch64.h
+index 070f077a..1e7cba3f 100644
+--- a/src/lj_target_loongarch64.h
++++ b/src/lj_target_loongarch64.h
+@@ -62,15 +62,14 @@ enum {
+ /* Make use of all registers, except ZERO, TMP, R2, SP, JGL, R20 and X. */
+ #define RSET_FIXED \
+   (RID2RSET(RID_ZERO)|RID2RSET(RID_TMP)|RID2RSET(RID_R2)|\
+-   RID2RSET(RID_SP)|RID2RSET(RID_JGL)|RID2RSET(RID_R20)|\
+-   RID2RSET(RID_X))
++   RID2RSET(RID_SP)|RID2RSET(RID_JGL)|RID2RSET(RID_X))
+ #define RSET_GPR	(RSET_RANGE(RID_MIN_GPR, RID_MAX_GPR) - RSET_FIXED)
+ #define RSET_FPR	RSET_RANGE(RID_MIN_FPR, RID_MAX_FPR)
+ #define RSET_ALL	(RSET_GPR|RSET_FPR)
+ #define RSET_INIT	RSET_ALL
+ 
+ /* scratch register. */
+-#define RSET_SCRATCH_GPR	(RSET_RANGE(RID_R4, RID_R19+1))
++#define RSET_SCRATCH_GPR	(RSET_RANGE(RID_R4, RID_R20+1))
+ #define RSET_SCRATCH_FPR	RSET_RANGE(RID_F0, RID_F23+1)
+ #define RSET_SCRATCH		(RSET_SCRATCH_GPR|RSET_SCRATCH_FPR)
+ #define REGARG_FIRSTGPR		RID_R4

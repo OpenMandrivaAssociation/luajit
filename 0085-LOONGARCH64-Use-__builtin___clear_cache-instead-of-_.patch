@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Guoqi Chen <chenguoqi@loongson.cn>
+Date: Wed, 25 Mar 2026 10:06:35 +0800
+Subject: [PATCH 85/91] LOONGARCH64: Use __builtin___clear_cache() instead of
+ __clear_cache
+
+---
+ src/lj_mcode.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/src/lj_mcode.c b/src/lj_mcode.c
+index 25b11ccf..ec96df2b 100644
+--- a/src/lj_mcode.c
++++ b/src/lj_mcode.c
+@@ -69,6 +69,8 @@ void lj_mcode_sync(void *start, void *end)
+ #else
+   syscall(__NR_riscv_flush_icache, start, end, 0UL);
+ #endif
++#elif LJ_TARGET_LOONGARCH64
++  __builtin___clear_cache(start, end);
+ #elif defined(__GNUC__) || defined(__clang__)
+   __clear_cache(start, end);
+ #else

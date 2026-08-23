@@ -1,0 +1,21 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: huangqiqi <huangqiqi@loongson.cn>
+Date: Thu, 17 Oct 2024 19:56:12 +0800
+Subject: [PATCH 31/91] LOONGARCH64: Fix the .ffunc_1 tostring
+
+---
+ src/vm_loongarch64.dasc | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/vm_loongarch64.dasc b/src/vm_loongarch64.dasc
+index d79b55bf..3e5c9462 100644
+--- a/src/vm_loongarch64.dasc
++++ b/src/vm_loongarch64.dasc
+@@ -1227,6 +1227,7 @@ static void build_subroutines(BuildCtx *ctx)
+   |  bl extern lj_strfmt_number	// (lua_State *L, cTValue *o)
+   |  // Returns GCstr *.
+   |  addi.d TMP1, r0, LJ_TSTR
++  |  ld.d BASE, L->base
+   |  settp CARG1, TMP1
+   |  b ->fff_restv
+   |

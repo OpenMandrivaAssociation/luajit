@@ -17,9 +17,8 @@
 
 # Upstream has officially switched to "release never" and
 # recommending git snapshots.
-# The version tag is given in seconds since January 1, 1970
-%define versiontag 1693350652
-
+# The version tag is given in seconds since January 1, 1970 00:00
+%define versiontag 1787165859
 %define tarname LuaJIT
 
 %global optflags %{optflags} -O3
@@ -33,169 +32,124 @@ License:	MIT
 Url:		https://luajit.org/luajit.html
 Source0:	https://github.com/LuaJIT/LuaJIT/archive/refs/heads/v%{mmajor}.tar.gz
 Patch0:		luajit-2.1.0-no-Lusrlib.patch
-# RISC-V support patches based on the git repository at
-# https://github.com/infiWang/LuaJIT-RV
-Patch1000:	0001-dynasm-stash-riscv-progress.patch
-# MODIFIED: removed chunk affecting src/lj_vm.h (floor/ceil) that is
-# undone in 0018 [and doesn't apply on current 2.1]
-Patch1001:	0002-lj-wip-init-rv64-interpreter-lib-progress.patch
-Patch1002:	0003-lj-wip-init-rv64-interpreter-bcvm-progress.patch
-Patch1003:	0004-lj-wip-refine-rv64-interpreter-bcvm-and-rx-0.patch
-Patch1004:	0005-lj-wip-refine-rv64-interpreter-bc-decode-and-registe.patch
-Patch1005:	0006-lj-wip-riscv-base-defs.patch
-Patch1006:	0007-dynasm-riscv-fix-reg-parse_disp-shftw-fmv-dx.patch
-Patch1007:	0008-lj-wip-vm_riscv64-minor-fix.patch
-Patch1008:	0009-riscv64-interp-fix-branch-global-label-overflow.patch
-Patch1009:	0010-riscv64-interp-misc-fix.patch
-Patch1010:	0011-riscv64-interp-fix-bit.bswap.patch
-Patch1011:	0012-riscv64-interp-fix-BC_IS-LT-LE-GT-GE.patch
-Patch1012:	0013-dynasm-riscv-fix-negw.patch
-Patch1013:	0014-dynasm-riscv-fix-RISC-V-ISA-ISE-iterate-order.patch
-Patch1014:	0015-dasm-riscv-fix-shamt.patch
-Patch1015:	0016-dynasm-riscv-allow-orderedPair-work-with-minilua.patch
-Patch1016:	0017-dynasm-riscv-refactor-orderedPairs.patch
-# 0018-riscv-interp-remove-stale-math-helper-condition.patch dropped (we fix 0002 instead)
-Patch1018:	0019-riscv-enable-vm_modi-helper-on-riscv64-platform.patch
-Patch1019:	0020-riscv-interp-add-a-pseudo-GOT-for-riscv64-platform.patch
-Patch1020:	0021-riscv-interp-comment-cleanup.patch
-# MODIFIED: rebased
-Patch1021:	0022-riscv-target-prepare-for-RISC-V-64-backend.patch
-Patch1022:	0023-riscv-emit-init.patch
-Patch1023:	0024-riscv64-asm-init.patch
-Patch1024:	0025-jit-add-RISC-V-flags.patch
-Patch1025:	0026-asm-include-RISC-V-64-header.patch
-Patch1026:	0027-riscv-interp-migrate-from-JGL-to-GL.patch
-Patch1027:	0028-riscv-interp-optimize-branch.patch
-Patch1028:	0029-riscv-interp-prepare-for-JIT.patch
-Patch1029:	0030-riscv-interp-refine-helper-macros.patch
-Patch1030:	0031-riscv-emit-polish-rot-lsptr-opk-lso-branch-jmp.patch
-Patch1031:	0032-riscv-interp-fix-LJ_KEYINDEX-load.patch
-Patch1032:	0033-emit-include-riscv-target-header.patch
-Patch1033:	0034-riscv-emit-misc-fix.patch
-Patch1034:	0035-riscv-target-drop-fixed-x5.patch
-Patch1035:	0036-target-correct-RISC-V-header.patch
-Patch1036:	0037-riscv-target-fix-reg.patch
-Patch1037:	0038-riscv-emit-misc-fix.patch
-Patch1038:	0039-riscv-target-add-missing-pseudo-instr.patch
-Patch1039:	0040-riscv-emit-fix-movrr.patch
-Patch1040:	0041-riscv-interp-misc-fix.patch
-Patch1041:	0042-riscv-emit-misc-fix.patch
-Patch1042:	0043-riscv-emit-modify-emit_opk.patch
-Patch1043:	0044-riscv-asm-misc-fix.patch
-Patch1044:	0045-riscv-jit-exit-handler-context-dispatch-fix.patch
-Patch1045:	0046-riscv-emit-fix-delta.patch
-Patch1046:	0047-riscv64-asm-misc-fixup.patch
-Patch1047:	0048-riscv-target-fix-IMMB-encode-macro.patch
-Patch1048:	0049-riscv-emit-misc-fix.patch
-Patch1049:	0050-riscv-emit-optimize-emit_loadk32-special-case-handli.patch
-Patch1050:	0051-riscv-emit-fix-emit_-call-jmp.patch
-Patch1051:	0052-jit-fix-riscv-cpu-flag-detection.patch
-Patch1052:	0053-arch-tune-RISC-V-64-JUMPRANGE.patch
-Patch1053:	0054-riscv-asm-misc-fix.patch
-Patch1054:	0055-riscv-asm-fix-misc-loadop-src-dst.patch
-Patch1055:	0056-riscv-asm-drop-unused-irl-in-bnot.patch
-Patch1056:	0057-riscv-asm-drop-unused-variable.patch
-Patch1057:	0058-riscv-target-remove-ra-from-scratch-register-list.patch
-Patch1058:	0059-riscv-emit-fix-emit_jmp-scratch-register-alloc.patch
-Patch1059:	0060-riscv-interp-Fix-BC_ISNEN-PC-calculation.patch
-Patch1060:	0061-riscv-interp-optimize-more-branch.patch
-Patch1061:	0062-riscv-asm-fix-asm_tointg-guard.patch
-Patch1062:	0063-riscv-asm-fix-asm_href-num-branch.patch
-Patch1063:	0064-riscv-asm-refine-asm_href-bit-select-semantic.patch
-# MODIFIED: rebased
-Patch1064:	0065-riscv-ffi-FFI-init.patch
-Patch1065:	0066-dynasm-riscv-fix-RVF-RVD-rounding-mode.patch
-Patch1066:	0067-dynasm-riscv-silent-compiler-warning.patch
-Patch1067:	0068-riscv-interp-rearange-FFI-handler-layout.patch
-Patch1068:	0069-riscv-ffi-fix-callback-mcode-init-macro-and-ub.patch
-Patch1069:	0070-riscv-comply-lp64d-ABI-sp-alignment.patch
-Patch1070:	0071-riscv-jit-fix-lj_vmeta_for-dispatch.patch
-Patch1071:	0072-riscv-ffi-fix-BC_IS-EQ-NE-V-vmeta-cdata-comparision-.patch
-Patch1072:	0073-riscv-interp-clean-unnecessary-liw-helper.patch
-Patch1073:	0074-riscv-misc-revert-early-development-workarounds-in-M.patch
-# MODIFIED: rebased
-Patch1074:	0075-riscv-vm-stop-generate-RVC-and-relax-in-lj_vm.patch
-Patch1075:	0076-riscv-misc-FFI-related-bug-workaround.patch
-Patch1076:	0077-riscv-misc-cleanup-nonsense-comment.patch
-Patch1077:	0078-riscv-interp-reallocate-TMP-registers-to-comply-with.patch
-Patch1078:	0079-Revert-riscv-misc-FFI-related-bug-workaround.patch
-Patch1079:	0080-riscv-jit-follow-global-FMA-flag.patch
-Patch1080:	0081-riscv-jit-fix-asm_fpunary-with-pseudo-instruction.patch
-Patch1081:	0082-riscv-jit-fix-asm_mulov.patch
-Patch1082:	0083-riscv-jit-optimize-asm_mulov.patch
-Patch1083:	0084-riscv-jit-fix-trace-number-handling-on-JIT-exit.patch
-Patch1084:	0085-riscv-jit-tune-trace-number-handling.patch
-Patch1085:	0086-riscv-jit-fix-asm_fpcomp.patch
-Patch1086:	0087-riscv-jit-fix-asm_min_max-with-integer.patch
-Patch1087:	0088-riscv-jit-correct-scratch-register-list.patch
-Patch1088:	0089-riscv-misc-correct-FUNCT3-FUNCT7-instruction-field-h.patch
-Patch1089:	0090-riscv-jit-fix-asm_href-generic-type-hashing.patch
-Patch1090:	0091-riscv-jit-fix-asm_loop_fixup-on-non-inverted-loop-ca.patch
-Patch1091:	0092-riscv-jit-fix-asm_tobit.patch
-Patch1092:	0093-riscv-jit-more-trace-number-handler-tuning.patch
-Patch1093:	0094-riscv-jit-fix-asm_prof.patch
-Patch1094:	0095-riscv-jit-fix-asm_tail_fixup.patch
-Patch1095:	0096-riscv-emit-fix-emit_jmp.patch
-Patch1096:	0097-riscv-emit-fix-emit_call.patch
-Patch1097:	0098-riscv-asm-fix-emit_rot-i.patch
-Patch1098:	0099-riscv-asm-fix-asm_bswap.patch
-Patch1099:	0100-riscv-jit-initial-exitno-handling-overhaul.patch
-Patch1100:	0101-riscv-asm-asm_guard-cleanup.patch
-Patch1101:	0102-riscv-interp-random-immediate-optimizations.patch
-Patch1102:	0103-riscv-emit-fix-emit_rot.patch
-Patch1103:	0104-riscv-interp-conditional-select-optimizations.patch
-Patch1104:	0105-riscv-emit-fix-emit_roti.patch
-Patch1105:	0106-riscv-asm-tune-asm_comp.patch
-Patch1106:	0107-riscv-asm-fix-asm_sparejump_use-argument-type.patch
-Patch1107:	0108-riscv-emit-fix-emit_loadk32.patch
-Patch1108:	0109-riscv-emit-drop-emit_loadk20.patch
-Patch1109:	0110-riscv-emit-optimize-emit_loadu64.patch
-Patch1110:	0111-riscv-asm-fix-emit_loadu64.patch
-Patch1111:	0112-riscv-emit-further-optimize-emit_loadu64.patch
-Patch1112:	0113-riscv-emit-cleanup-emit_loadu64.patch
-Patch1113:	0114-riscv-emit-emit_loadu64-regression-workaround.patch
-Patch1114:	0115-riscv-asm-cleanup-asm_gc_check.patch
-Patch1115:	0116-riscv-asm-fix-asm_patchexit-on-end-of-loop-exit.patch
-Patch1116:	0117-riscv-asm-fix-asm_tointg.patch
-Patch1117:	0118-riscv-ffi-callback-initial-fix.patch
-Patch1118:	0119-riscv-ffi-fix-last-commit.patch
-Patch1119:	0120-riscv-emit-fix-emit_opk-constant-argument-type.patch
-Patch1120:	0121-riscv-ffi-fix-lj_vm_ffi_callback.patch
-Patch1121:	0122-riscv-arch-set-free-JIT-FFI.patch
-Patch1122:	0123-riscv-dispatch-fix-FFIGOTDEF.patch
-Patch1123:	0124-riscv-makefile-add-fwrapv-as-workaround.patch
-Patch1124:	0125-riscv-jit-add-disassembler-and-bcsave-definition.patch
-Patch1125:	0126-riscv-emit-sanitize-ub.patch
-Patch1126:	0127-Revert-riscv-makefile-add-fwrapv-as-workaround.patch
-Patch1127:	0128-riscv-emit-more-sanitization.patch
-Patch1128:	0129-riscv-asm-fix-float-to-int-type-conversion-rounding.patch
-Patch1129:	0130-riscv-asm-asm_setup_call_slots-workaround.patch
-Patch1130:	0131-riscv-jit-fix-bcsave-ELF-e_flags.patch
-Patch1131:	0132-riscv-interp-refine-TOBIT-init.patch
-Patch1132:	0133-riscv-interp-refine-BC_MULxx.patch
-Patch1133:	0134-riscv-interp-refine-last-commit.patch
-Patch1134:	0135-riscv-jit-probe-and-emit-zba-zbb-extension.patch
-Patch1135:	0136-riscv-asm-fix-asm_href-branch-guard-patching.patch
-Patch1136:	0137-riscv-asm-refine-last-commit.patch
-Patch1137:	0138-riscv-jit-probe-for-compressed-extension.patch
-Patch1138:	0139-riscv-jit-format-riscv-functions.patch
-Patch1139:	0140-riscv-asm-fix-sparejump-return-chaining.patch
-Patch1140:	0141-riscv-asm-revert-last-commit.patch
-Patch1141:	0142-riscv-interp-fix-minmax-fast-function.patch
-Patch1142:	0143-riscv-jit-attempt-to-fuse-andn-orn-xnor.patch
-Patch1143:	0144-riscv-asm-copy-RID_TMP-magic-from-MIPS.patch
-Patch1144:	0145-riscv-asm-fix-asm_gencall-with-variable-argument-fun.patch
-Patch1145:	0146-riscv-asm-fix-asm_setup_call_slots-with-variable-arg.patch
-Patch1146:	0147-riscv-asm-fix-asm_hrefk-bigofs-check.patch
-Patch1147:	0148-riscv-asm-introduce-XThead-ext-more-bitmanip-optimiz.patch
-Patch1148:	0149-riscv-jit-correct-stack-pointer-alignment.patch
-Patch1149:	0150-riscv-asm-fix-base-register-coalescing-in-side-trace.patch
-# 0151-misc-add-a-proper-README.patch disabled, clashes with master (and is README only)
-# 0152-misc-update-README.patch disabled, clashes with master (and is README only)
-Patch1152:	0153-riscv64-interp-Ensure-forward-progress-on-trace-exit.patch
-Patch1153:	0154-riscv64-Fix-bad-FP-FLOAD-assertion.patch
-Patch1154:	0155-DynASM-riscv64-Fix-warnings.patch
-Patch1155:	0156-riscv64-asm-fix-asm_bswap-scratch-register-list.patch
+# RISC-V support from https://github.com/infiWang/LuaJIT-RV (v2.1-riscv64),
+# rebased onto current upstream v2.1. README.md patch omitted.
+Patch1000:	0001-riscv-support-add-RISC-V-64-arch-base-definition.patch
+Patch1001:	0002-riscv-dynasm-add-RISC-V-support.patch
+Patch1002:	0003-riscv-interp-add-register-definition.patch
+Patch1003:	0004-riscv-interp-add-frame-definition.patch
+Patch1004:	0005-riscv-interp-add-helper-macros-and-typedefs.patch
+Patch1005:	0006-riscv-interp-add-base-assembly-interpreter-VM.patch
+Patch1006:	0007-riscv-support-add-target-definition.patch
+Patch1007:	0008-riscv-ffi-add-call-convention-and-support-framework.patch
+Patch1008:	0009-riscv-support-add-extension-detection.patch
+Patch1009:	0010-riscv-jit-add-mandatory-constants.patch
+Patch1010:	0011-riscv-jit-add-insn-emitter.patch
+Patch1011:	0012-riscv-jit-add-IR-assembler.patch
+Patch1012:	0013-riscv-interp-add-VM-builder-support.patch
+Patch1013:	0014-riscv-misc-add-bytecode-listing-support.patch
+Patch1014:	0015-riscv-jit-add-hooks-in-interpreter.patch
+Patch1015:	0016-riscv-interp-add-DWARF-info.patch
+Patch1016:	0017-riscv-jit-add-GDBJIT-support.patch
+Patch1017:	0018-riscv-support-linux-add-Linux-specfic-icache-sync-co.patch
+Patch1018:	0019-riscv-support-linux-make-mremap-non-moving-due-to-VA.patch
+Patch1019:	0020-riscv-misc-add-disassmbler-support.patch
+Patch1020:	0021-riscv-misc-add-support-in-Makefile.patch
+# LoongArch64 support from https://github.com/loongson/LuaJIT (v2.1-loongarch64),
+# rebased onto current upstream v2.1 + RISC-V. LUAJIT_ARCH_LOONGARCH64 is 9
+# (RISC-V already uses 8).
+Patch2000:	0001-LoongArch64-Add-target-architecture-selection.patch
+Patch2001:	0002-LoongArch64-Add-DynASM-support.patch
+Patch2002:	0003-LoongArch64-Add-register-assignments-for-the-interpr.patch
+Patch2003:	0004-LoongArch64-Add-stack-layout.patch
+Patch2004:	0005-LoongArch64-Add-some-general-macro-type-definitions-.patch
+Patch2005:	0006-LoongArch64-Add-pure-interpreter-backend.patch
+Patch2006:	0007-LoongArch64-Add-definitions-for-target-CPU.patch
+Patch2007:	0008-LoongArch64-Add-some-constant-definitions.patch
+Patch2008:	0009-LoongArch64-Add-LoongArch-instruction-emitter.patch
+Patch2009:	0010-LoongArch64-Add-IR-assembler-support.patch
+Patch2010:	0011-LoongArch64-Add-JIT-support-in-the-interpreter.patch
+Patch2011:	0012-LoongArch64-Add-CPU-feature-detection-when-init-JIT-.patch
+Patch2012:	0013-LoongArch64-Add-LoongArch-lp64-calling-conventions-a.patch
+Patch2013:	0014-LoongArch64-Add-FFI-C-callback-handling.patch
+Patch2014:	0015-LoongArch64-Add-FFI-support-in-the-interpreter.patch
+Patch2015:	0016-LoongArch64-Add-DWARF-and-ELF-header-definitions.patch
+Patch2016:	0017-LoongArch64-Add-support-for-LuaJIT-VM-builder.patch
+Patch2017:	0018-LoongArch64-Add-loongarch64-support-when-save-list-b.patch
+Patch2018:	0019-LoongArch64-Add-LoongArch64-disassembler-module.patch
+Patch2019:	0020-LoongArch64-Add-support-in-Makefile.patch
+Patch2020:	0021-LoongArch64-Upgrade-the-base-code-to-v2.1.ROLLING.patch
+Patch2021:	0022-LoongArch64-Sync-code-with-luajit2-s-6f2fa1d9.patch
+Patch2022:	0023-LOONGARCH64-Optimize-function-that-moves-i32-constan.patch
+Patch2023:	0024-LOONGARCH64-Optimize-emit_store-loadofs-and-emit_mov.patch
+Patch2024:	0025-LOONGARCH64-Optimize-emit_djml-function-and-remove-e.patch
+Patch2025:	0026-LOONGARCH64-Optimize-register-allocation-RID_R20-reg.patch
+Patch2026:	0027-LOONGARCH64-Add-stack-check-to-pcall-xpcall.patch
+Patch2027:	0028-LOONGARCH64-Fixed-the-register-allocation-bug-in-asm.patch
+Patch2028:	0029-LOONGARCH64-Fix-the-setup-for-the-end-of-each-trace-.patch
+Patch2029:	0030-LOONGARCH64-Standardize-coding-style-and-comments.patch
+Patch2030:	0031-LOONGARCH64-Fix-the-.ffunc_1-tostring.patch
+Patch2031:	0032-LOONGARCH64-Optimize-emit_-functions-to-eliminate-th.patch
+Patch2032:	0033-LOONGARCH64-Optimize-LOONGF_I-to-LOONGF_I-to-elimina.patch
+Patch2033:	0034-LOONGARCH64-Optimize-the-efficiency-of-getting-setti.patch
+Patch2034:	0035-LOONGARCH64-Fix-the-error-of-checking-the-immediate-.patch
+Patch2035:	0036-LOONGARCH64-Fix-emit_lsptr-and-emit_load-storeofs-fu.patch
+Patch2036:	0037-LOONGARCH64-Fix-the-bug-introduced-by-emit_-function.patch
+Patch2037:	0038-LOONGARCH64-Fix-the-way-to-load-UREF-op1-address-in-.patch
+Patch2038:	0039-LOONGARCH64-Fix-the-branch-that-is-out-of-range-when.patch
+Patch2039:	0040-LOONGARCH64-Optimized-the-bswap-function.patch
+Patch2040:	0041-LOONGARCH64-Fixed-the-bug-in-math_minmax-function.patch
+Patch2041:	0042-LOONGARCH64-Fixed-the-bug-in-pcall-and-xpcall-functi.patch
+Patch2042:	0043-LOONGARCH64-Optimized-the-use-of-some-conditional-br.patch
+Patch2043:	0044-LOONGARCH64-Fix-the-bug-in-Hard-float-round-to-integ.patch
+Patch2044:	0045-LOONGARCH64-Fixed-the-bugs-of-movfcsr2gr_2-movgr2fcs.patch
+Patch2045:	0046-LOONGARCH64-Optimizing-the-vm_next-function.patch
+Patch2046:	0047-LOONGARCH64-Bump-copyright-date.patch
+Patch2047:	0048-LOONGARCH64-Fix-pcall-error-case.patch
+Patch2048:	0049-LOONGARCH64-Fix-FP-to-integer-conversions.patch
+Patch2049:	0050-LOONGARCH64-Add-the-definition-and-usage-of-the-CFR.patch
+Patch2050:	0051-LOONGARCH64-Fix-vm_next-register-dirty-read-bug.patch
+Patch2051:	0052-LOONGARCH64-Fix-min-max-return-register-error.patch
+Patch2052:	0053-LOONGARCH64-Optimize-unary-test-and-copy-ops.patch
+Patch2053:	0054-LOONGARCH64-Fix-the-BC_UNM-int-error.patch
+Patch2054:	0055-LOONGARCH64-Optimize-binary-arith-ops.patch
+Patch2055:	0056-LOONGARCH64-Optimize-the-BC_KNUM.patch
+Patch2056:	0057-LOONGARCH64-Optimize-the-table-upvalue-and-function-.patch
+Patch2057:	0058-LOONGARCH64-Fix-BC_TSETS_Z-overwriting-the-mark-regi.patch
+Patch2058:	0059-LOONGARCH64-Optimize-calls-and-vararg-handling.patch
+Patch2059:	0060-LOONGARCH64-Optimize-target-jump-calculation-by-stre.patch
+Patch2060:	0061-LOONGARCH64-Optimize-return-ops.patch
+Patch2061:	0062-LOONGARCH64-Eliminate-unnecessary-register-moves-and.patch
+Patch2062:	0063-LOONGARCH64-Simplify-function-headers-by-eliminating.patch
+Patch2063:	0064-LOONGARCH64-Switch-from-DISPATCH-base-to-JGL-base-to.patch
+Patch2064:	0065-LOONGARCH64-Replace-or-CARG1-L-r0-with-mv-CARG1-L-to.patch
+Patch2065:	0066-LOONGARCH64-Replace-jirl-r0-ra-0-with-ret-to-improve.patch
+Patch2066:	0067-LOONGARCH64-Replace-addi.d-rd-r0-si12-with-l12i-rd-s.patch
+Patch2067:	0068-LOONGARCH64-Fix-the-bug-of-register-allocation-overl.patch
+Patch2068:	0069-LOONGARCH64-Optimize-the-comparison-method-of-certai.patch
+Patch2069:	0070-LOONGARCH64-Replace-addi.w-rd-r0-si12-with-l12i-rd-s.patch
+Patch2070:	0071-LOONGARCH64-Adjust-assembly-instructions-to-improve-.patch
+Patch2071:	0072-LOONGARCH64-Fix-li-traceno-range-check-and-instructi.patch
+Patch2072:	0073-LOONGARCH64-Fix-the-bug-in-generating-machine-instru.patch
+Patch2073:	0074-LOONGARCH64-Fix-offset-calculation-between-current-P.patch
+Patch2074:	0075-LOONGARCH64-Optimize-the-implementation-mechanism-of.patch
+Patch2075:	0076-LOONGARCH64-Fix-tmp-register-restored-after-guard-ex.patch
+Patch2076:	0077-LOONGARCH64-Optimize-register-allocation-to-use-RID_.patch
+Patch2077:	0078-LOONGARCH64-Fixed-ffi_callback-to-ensure-global_Stat.patch
+Patch2078:	0079-LOONGARCH64-Fixed-the-old-PC-being-overwritten-by-th.patch
+Patch2079:	0080-LOONGARCH64-Fixed-data-loss-in-number-type-caused-by.patch
+Patch2080:	0081-LOONGARCH64-Use-LJ_NO_UNWIND-macro-to-control-genera.patch
+Patch2081:	0082-LOONGARCH64-Fix-the-bug-where-the-value-of-FTMP0-is-.patch
+Patch2082:	0083-LOONGARCH64-Fix-debug_frame-and-eh_frame-CFI-for-vm_.patch
+Patch2083:	0084-LOONGARCH64-Adjust-.eh_frame-CIE-and-FDE-alignment-f.patch
+Patch2084:	0085-LOONGARCH64-Use-__builtin___clear_cache-instead-of-_.patch
+Patch2085:	0086-LOONGARCH64-Use-__loongarch_lp64-instead-of-_ABILP64.patch
+Patch2086:	0087-LoongArch64-Allow-mcode-allocations-outside-of-the-j.patch
+Patch2087:	0088-LoongArch64-Unify-Lua-number-to-FFI-integer-conversi.patch
+Patch2088:	0089-LoongArch64-DUALNUM-Improve-fix-edge-cases-of-unary-.patch
+Patch2089:	0090-LoongArch64-Avoid-unaligned-load-in-lj_vm_exit_inter.patch
+Patch2090:	0091-LoongArch64-Bump-copyright-date.patch
+
 Requires:	%{libcommon} = %{version}-%{release}
 
 BuildRequires:	make

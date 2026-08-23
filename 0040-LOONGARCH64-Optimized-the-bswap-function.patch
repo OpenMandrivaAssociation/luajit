@@ -1,0 +1,30 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Huang Qiqi <huangqiqi@loongson.cn>
+Date: Wed, 27 Nov 2024 15:22:51 +0800
+Subject: [PATCH 40/91] LOONGARCH64: Optimized the bswap function
+
+---
+ src/vm_loongarch64.dasc | 10 ++--------
+ 1 file changed, 2 insertions(+), 8 deletions(-)
+
+diff --git a/src/vm_loongarch64.dasc b/src/vm_loongarch64.dasc
+index 7387808f..a7eed3d2 100644
+--- a/src/vm_loongarch64.dasc
++++ b/src/vm_loongarch64.dasc
+@@ -1869,14 +1869,8 @@ static void build_subroutines(BuildCtx *ctx)
+   |.ffunc_bit_op bxor, xor
+   |
+   |.ffunc_bit bswap
+-  |  srli.d TMP0, CRET1, 8
+-  |  srli.d TMP1, CRET1, 24
+-  |  srli.d TMP2,TMP0, 8
+-  |  andi TMP3, TMP2, 0xff
+-  |  slli.d TMP3, TMP3, 8
+-  |  bstrins.d TMP1, CRET1, 31, 24
+-  |  bstrins.d TMP3, TMP0, 23, 16
+-  |  or CRET1, TMP1, TMP3
++  |  revb.2w CRET1, CRET1
++  |  bstrpick.d CRET1, CRET1, 31, 0
+   |  b ->fff_resi
+   |
+   |.ffunc_bit tobit

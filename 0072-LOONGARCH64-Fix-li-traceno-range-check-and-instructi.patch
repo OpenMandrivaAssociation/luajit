@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Huang Qiqi <huangqiqi@loongson.cn>
+Date: Fri, 18 Apr 2025 16:15:14 +0800
+Subject: [PATCH 72/91] LOONGARCH64: Fix "li traceno" range check and
+ instruction in exit stub
+
+---
+ src/lj_asm_loongarch64.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/lj_asm_loongarch64.h b/src/lj_asm_loongarch64.h
+index 67440443..442617bd 100644
+--- a/src/lj_asm_loongarch64.h
++++ b/src/lj_asm_loongarch64.h
+@@ -63,8 +63,8 @@ static void asm_exitstub_setup(ASMState *as)
+     *--mxp = LOONGI_LU12I_W | LOONGF_D(RID_TMP) | LOONGF_I20(target>>12);
+   }
+   *--mxp = LOONGI_ST_W | LOONGF_D(RID_TMP) | LOONGF_J(RID_SP) | LOONGF_I12(4);
+-  if (checki12(as->T->traceno)) {
+-    *--mxp = LOONGI_ADDI_D | LOONGF_D(RID_TMP) | RID_ZERO | LOONGF_I12(as->T->traceno);
++  if (checku12(as->T->traceno)) {
++    *--mxp = LOONGI_ORI | LOONGF_D(RID_TMP) | RID_ZERO | LOONGF_I12(as->T->traceno);
+   } else {
+     *--mxp = LOONGI_ORI | LOONGF_D(RID_TMP) | LOONGF_J(RID_TMP) | LOONGF_I12(as->T->traceno);
+     *--mxp = LOONGI_LU12I_W | LOONGF_D(RID_TMP) | LOONGF_I20(as->T->traceno>>12);

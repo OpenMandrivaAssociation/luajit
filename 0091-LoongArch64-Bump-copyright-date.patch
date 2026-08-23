@@ -1,0 +1,115 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Huang Qiqi <huangqiqi@loongson.cn>
+Date: Tue, 14 Jul 2026 10:39:10 +0800
+Subject: [PATCH 91/91] LoongArch64: Bump copyright date
+
+---
+ dynasm/dasm_loongarch64.h   | 4 ++--
+ dynasm/dasm_loongarch64.lua | 4 ++--
+ src/jit/dis_loongarch64.lua | 4 ++--
+ src/lj_asm_loongarch64.h    | 4 ++--
+ src/lj_emit_loongarch64.h   | 4 ++--
+ src/lj_target_loongarch64.h | 4 ++--
+ src/vm_loongarch64.dasc     | 4 ++--
+ 7 files changed, 14 insertions(+), 14 deletions(-)
+
+diff --git a/dynasm/dasm_loongarch64.h b/dynasm/dasm_loongarch64.h
+index 74f1d323..21776e9f 100644
+--- a/dynasm/dasm_loongarch64.h
++++ b/dynasm/dasm_loongarch64.h
+@@ -1,7 +1,7 @@
+ /*
+ ** DynASM LoongArch encoding engine.
+-** Copyright (C) 2005-2025 Mike Pall. All rights reserved.
+-** Copyright (C) 2025 Loongson Technology. All rights reserved.
++** Copyright (C) 2005-2026 Mike Pall. All rights reserved.
++** Copyright (C) 2026 Loongson Technology. All rights reserved.
+ ** Released under the MIT license. See dynasm.lua for full copyright notice.
+ */
+ 
+diff --git a/dynasm/dasm_loongarch64.lua b/dynasm/dasm_loongarch64.lua
+index d4103799..9b4a5ed9 100644
+--- a/dynasm/dasm_loongarch64.lua
++++ b/dynasm/dasm_loongarch64.lua
+@@ -1,8 +1,8 @@
+ ------------------------------------------------------------------------------
+ -- DynASM LoongArch module.
+ --
+--- Copyright (C) 2005-2025 Mike Pall. All rights reserved.
+--- Copyright (C) 2025 Loongson Technology. All rights reserved.
++-- Copyright (C) 2005-2026 Mike Pall. All rights reserved.
++-- Copyright (C) 2026 Loongson Technology. All rights reserved.
+ -- See dynasm.lua for full copyright notice.
+ ------------------------------------------------------------------------------
+ 
+diff --git a/src/jit/dis_loongarch64.lua b/src/jit/dis_loongarch64.lua
+index f638f431..3419125e 100644
+--- a/src/jit/dis_loongarch64.lua
++++ b/src/jit/dis_loongarch64.lua
+@@ -1,8 +1,8 @@
+ ----------------------------------------------------------------------------
+ -- LuaJIT LoongArch disassembler module.
+ --
+--- Copyright (C) 2005-2025 Mike Pall. All rights reserved.
+--- Copyright (C) 2025 Loongson Technology. All rights reserved.
++-- Copyright (C) 2005-2026 Mike Pall. All rights reserved.
++-- Copyright (C) 2026 Loongson Technology. All rights reserved.
+ -- Released under the MIT/X license. See Copyright Notice in luajit.h
+ ----------------------------------------------------------------------------
+ -- This is a helper module used by the LuaJIT machine code dumper module.
+diff --git a/src/lj_asm_loongarch64.h b/src/lj_asm_loongarch64.h
+index 90830372..56ce5c8d 100644
+--- a/src/lj_asm_loongarch64.h
++++ b/src/lj_asm_loongarch64.h
+@@ -1,7 +1,7 @@
+ /*
+ ** LoongArch IR assembler (SSA IR -> machine code).
+-** Copyright (C) 2005-2025 Mike Pall. See Copyright Notice in luajit.h
+-** Copyright (C) 2025 Loongson Technology. All rights reserved.
++** Copyright (C) 2005-2026 Mike Pall. See Copyright Notice in luajit.h
++** Copyright (C) 2026 Loongson Technology. All rights reserved.
+ */
+ 
+ /* -- Register allocator extensions --------------------------------------- */
+diff --git a/src/lj_emit_loongarch64.h b/src/lj_emit_loongarch64.h
+index 800fd431..32eb2ddc 100644
+--- a/src/lj_emit_loongarch64.h
++++ b/src/lj_emit_loongarch64.h
+@@ -1,7 +1,7 @@
+ /*
+ ** LoongArch instruction emitter.
+-** Copyright (C) 2005-2025 Mike Pall. See Copyright Notice in luajit.h
+-** Copyright (C) 2025 Loongson Technology. All rights reserved.
++** Copyright (C) 2005-2026 Mike Pall. See Copyright Notice in luajit.h
++** Copyright (C) 2026 Loongson Technology. All rights reserved.
+ */
+ 
+ static intptr_t get_k64val(ASMState *as, IRRef ref)
+diff --git a/src/lj_target_loongarch64.h b/src/lj_target_loongarch64.h
+index fca02ffd..be25f406 100644
+--- a/src/lj_target_loongarch64.h
++++ b/src/lj_target_loongarch64.h
+@@ -1,7 +1,7 @@
+ /*
+ ** Definitions for LoongArch CPUs.
+-** Copyright (C) 2005-2025 Mike Pall. See Copyright Notice in luajit.h
+-** Copyright (C) 2025 Loongson Technology. All rights reserved.
++** Copyright (C) 2005-2026 Mike Pall. See Copyright Notice in luajit.h
++** Copyright (C) 2026 Loongson Technology. All rights reserved.
+ */
+ 
+ #ifndef _LJ_TARGET_LOONGARCH_H
+diff --git a/src/vm_loongarch64.dasc b/src/vm_loongarch64.dasc
+index 81950b04..e279bfc6 100644
+--- a/src/vm_loongarch64.dasc
++++ b/src/vm_loongarch64.dasc
+@@ -1,7 +1,7 @@
+ |// Low-level VM code for LoongArch CPUs.
+ |// Bytecode interpreter, fast functions and helper functions.
+-|// Copyright (C) 2005-2025 Mike Pall. See Copyright Notice in luajit.h
+-|// Copyright (C) 2025 Loongson Technology. All rights reserved.
++|// Copyright (C) 2005-2026 Mike Pall. See Copyright Notice in luajit.h
++|// Copyright (C) 2026 Loongson Technology. All rights reserved.
+ |
+ |.arch loongarch64
+ |.section code_op, code_sub

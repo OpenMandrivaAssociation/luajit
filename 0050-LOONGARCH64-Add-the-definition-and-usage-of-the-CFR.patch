@@ -1,0 +1,59 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Huang Qiqi <huangqiqi@loongson.cn>
+Date: Mon, 6 Jan 2025 15:15:10 +0800
+Subject: [PATCH 50/91] LOONGARCH64: Add the definition and usage of the CFR
+
+---
+ src/lj_asm_loongarch64.h    | 8 ++++----
+ src/lj_target_loongarch64.h | 3 +++
+ 2 files changed, 7 insertions(+), 4 deletions(-)
+
+diff --git a/src/lj_asm_loongarch64.h b/src/lj_asm_loongarch64.h
+index c92b3648..bff01162 100644
+--- a/src/lj_asm_loongarch64.h
++++ b/src/lj_asm_loongarch64.h
+@@ -545,9 +545,9 @@ static void asm_conv(ASMState *as, IRIns *ir)
+ 	  emit_djk(as, LOONGI_FADD_D, tmp, left, tmp);
+ 	  emit_lsptr(as, LOONGI_FLD_D, (tmp & 0x1f), (void *)&as->J->k64[LJ_K64_M2P64],
+ 		     rset_exclude(RSET_GPR, dest));
+-	  emit_branch21(as, LOONGI_BCNEZ, 0, l_end);
++	  emit_branch21(as, LOONGI_BCNEZ, (RID_FCC0 & 0x3f), l_end);
+ 	  emit_dj(as, LOONGI_FTINTRZ_L_D, tmp, left);
+-	  emit_djk(as, LOONGI_FCMP_CLT_D, 0, left, tmp);
++	  emit_djk(as, LOONGI_FCMP_CLT_D, (RID_FCC0 & 0x3f), left, tmp);
+ 	  emit_lsptr(as, LOONGI_FLD_D, (tmp & 0x1f), (void *)&as->J->k64[LJ_K64_2P63],
+ 		     rset_exclude(RSET_GPR, dest));
+ 	} else {
+@@ -555,9 +555,9 @@ static void asm_conv(ASMState *as, IRIns *ir)
+ 	  emit_djk(as, LOONGI_FADD_S, tmp, left, tmp);
+ 	  emit_lsptr(as, LOONGI_FLD_S, (tmp & 0x1f), (void *)&as->J->k32[LJ_K32_M2P64],
+ 		     rset_exclude(RSET_GPR, dest));
+-	  emit_branch21(as, LOONGI_BCNEZ, 0, l_end);
++	  emit_branch21(as, LOONGI_BCNEZ, (RID_FCC0 & 0x3f), l_end);
+ 	  emit_dj(as, LOONGI_FTINTRZ_L_S, tmp, left);
+-	  emit_djk(as, LOONGI_FCMP_CLT_S, 0, left, tmp);
++	  emit_djk(as, LOONGI_FCMP_CLT_S, (RID_FCC0 & 0x3f), left, tmp);
+ 	  emit_lsptr(as, LOONGI_FLD_S, (tmp & 0x1f), (void *)&as->J->k32[LJ_K32_2P63],
+ 		     rset_exclude(RSET_GPR, dest));
+ 	}
+diff --git a/src/lj_target_loongarch64.h b/src/lj_target_loongarch64.h
+index c15f47a0..5d385d3b 100644
+--- a/src/lj_target_loongarch64.h
++++ b/src/lj_target_loongarch64.h
+@@ -19,6 +19,8 @@
+   _(F8) _(F9) _(F10) _(F11) _(F12) _(F13) _(F14) _(F15) \
+   _(F16) _(F17) _(F18) _(F19) _(F20) _(F21) _(F22) _(F23) \
+   _(F24) _(F25) _(F26) _(F27) _(F28) _(F29) _(F30) _(F31)
++#define CFRDEF(_) \
++  _(FCC0) _(FCC1) _(FCC2) _(FCC3) _(FCC4) _(FCC5) _(FCC6) _(FCC7)
+ #define VRIDDEF(_)
+ 
+ #define RIDENUM(name)	RID_##name,
+@@ -26,6 +28,7 @@
+ enum {
+   GPRDEF(RIDENUM)		/* General-purpose registers (GPRs). */
+   FPRDEF(RIDENUM)		/* Floating-point registers (FPRs). */
++  CFRDEF(RIDENUM)		/* Condition-flags registers (CFRs). */
+   RID_MAX,
+   RID_ZERO = RID_R0,
+   RID_TMP = RID_RA,

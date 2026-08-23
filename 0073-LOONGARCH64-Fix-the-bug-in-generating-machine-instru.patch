@@ -1,0 +1,42 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Huang Qiqi <huangqiqi@loongson.cn>
+Date: Wed, 7 May 2025 16:15:32 +0800
+Subject: [PATCH 73/91] LOONGARCH64: Fix the bug in generating machine
+ instructions in asm_mulov
+
+---
+ src/lj_asm_loongarch64.h    | 8 +++-----
+ src/lj_target_loongarch64.h | 1 +
+ 2 files changed, 4 insertions(+), 5 deletions(-)
+
+diff --git a/src/lj_asm_loongarch64.h b/src/lj_asm_loongarch64.h
+index 442617bd..2379ce4e 100644
+--- a/src/lj_asm_loongarch64.h
++++ b/src/lj_asm_loongarch64.h
+@@ -1444,11 +1444,9 @@ static void asm_mulov(ASMState *as, IRIns *ir)
+   right = (left >> 8); left &= 255;
+   tmp = ra_scratch(as, rset_exclude(rset_exclude(
+ 			rset_exclude(RSET_GPR, left), right), dest));
+-  asm_guard(as, LOONGI_BEQ, tmp, RID_R0);
+-  emit_djk(as, LOONGI_XOR, tmp, tmp, RID_TMP);
+-  emit_dju5(as, LOONGI_SRAI_W, RID_TMP, dest, 31);
+-  emit_djk(as, LOONGI_MULH_W, tmp, left, right);
+-  emit_djk(as, LOONGI_MUL_W, dest, left, right);
++  asm_guard(as, LOONGI_BNE, tmp, dest);
++  emit_dju5(as, LOONGI_SLLI_W, dest, tmp, 0);
++  emit_djk(as, LOONGI_MULW_D_W, tmp, left, right);
+ }
+ 
+ static void asm_bnot(ASMState *as, IRIns *ir)
+diff --git a/src/lj_target_loongarch64.h b/src/lj_target_loongarch64.h
+index 5d385d3b..345b1ebf 100644
+--- a/src/lj_target_loongarch64.h
++++ b/src/lj_target_loongarch64.h
+@@ -165,6 +165,7 @@ typedef enum LOONGIns {
+   LOONGI_SUB_W = 0x00110000,
+   LOONGI_MUL_W = 0x001c0000,
+   LOONGI_MULH_W = 0x001c8000,
++  LOONGI_MULW_D_W = 0x001f0000,
+   LOONGI_DIV_W = 0x00200000,
+   LOONGI_DIV_WU = 0x00210000,
+ 

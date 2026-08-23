@@ -1,0 +1,695 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Huang Qiqi <huangqiqi@loongson.cn>
+Date: Fri, 3 Jan 2025 16:28:28 +0800
+Subject: [PATCH 22/91] LoongArch64: Sync code with luajit2's 6f2fa1d9
+
+---
+ dynasm/dasm_loongarch64.h   |   9 +--
+ dynasm/dasm_loongarch64.lua |   5 +-
+ src/jit/dis_loongarch64.lua |  27 +++++----
+ src/lj_asm_loongarch64.h    | 115 ++++++++++++++++++++++++------------
+ src/lj_emit_loongarch64.h   |   7 ++-
+ src/lj_target_loongarch64.h |   5 +-
+ src/vm_loongarch64.dasc     | 102 +++++++++++++++++---------------
+ 7 files changed, 162 insertions(+), 108 deletions(-)
+
+diff --git a/dynasm/dasm_loongarch64.h b/dynasm/dasm_loongarch64.h
+index 6d232ece..c4397927 100644
+--- a/dynasm/dasm_loongarch64.h
++++ b/dynasm/dasm_loongarch64.h
+@@ -1,6 +1,7 @@
+ /*
+ ** DynASM LoongArch encoding engine.
+ ** Copyright (C) 2005-2022 Mike Pall. All rights reserved.
++** Copyright (C) 2022 Loongson Technology. All rights reserved.
+ ** Released under the MIT license. See dynasm.lua for full copyright notice.
+ */
+ 
+@@ -150,10 +151,10 @@ void dasm_setup(Dst_DECL, const void *actionlist)
+ #ifdef DASM_CHECKS
+ #define CK(x, st) \
+   do { if (!(x)) { \
+-    D->status = DASM_S_##st|(int)(p-D->actionlist-1); return; } } while (0)
++    D->status = DASM_S_##st|(p-D->actionlist-1); return; } } while (0)
+ #define CKPL(kind, st) \
+   do { if ((size_t)((char *)pl-(char *)D->kind##labels) >= D->kind##size) { \
+-    D->status = DASM_S_RANGE_##st|(int)(p-D->actionlist-1); return; } } while (0)
++    D->status = DASM_S_RANGE_##st|(p-D->actionlist-1); return; } } while (0)
+ #else
+ #define CK(x, st)	((void)0)
+ #define CKPL(kind, st)	((void)0)
+@@ -323,7 +324,7 @@ int dasm_link(Dst_DECL, size_t *szp)
+ 
+ #ifdef DASM_CHECKS
+ #define CK(x, st) \
+-  do { if (!(x)) return DASM_S_##st|(int)(p-D->actionlist-1); } while (0)
++  do { if (!(x)) return DASM_S_##st|(p-D->actionlist-1); } while (0)
+ #else
+ #define CK(x, st)	((void)0)
+ #endif
+@@ -436,7 +437,7 @@ int dasm_checkstep(Dst_DECL, int secmatch)
+   }
+   if (D->status == DASM_S_OK && secmatch >= 0 &&
+       D->section != &D->sections[secmatch])
+-    D->status = DASM_S_MATCH_SEC|(int)(D->section-D->sections);
++    D->status = DASM_S_MATCH_SEC|(D->section-D->sections);
+   return D->status;
+ }
+ #endif
+diff --git a/dynasm/dasm_loongarch64.lua b/dynasm/dasm_loongarch64.lua
+index ba6bf67e..3aacb681 100644
+--- a/dynasm/dasm_loongarch64.lua
++++ b/dynasm/dasm_loongarch64.lua
+@@ -2,6 +2,7 @@
+ -- DynASM LoongArch module.
+ --
+ -- Copyright (C) 2005-2022 Mike Pall. All rights reserved.
++-- Copyright (C) 2022 Loongson Technology. All rights reserved.
+ -- See dynasm.lua for full copyright notice.
+ ------------------------------------------------------------------------------
+ 
+@@ -658,12 +659,12 @@ local function parse_imm21or26(imm, i)
+       if s == 0 then
+         return shl(sub(m, 1, 16), 10) + shl(sub(m, 17, i), 0)
+       elseif s == -1 then
+-        return shl(sub(m, 1, 16), 10) + shl(sub(m, 17, i), 0)
++        return shl(sub(m, 1, 16), 10) + shl(sub(m, 17, i), 0)	--TODO
+       end
+     end
+     werror("out of range immediate2 `"..imm.."'")
+   else
+-    waction("IMM2", 0, imm)
++    waction("IMM2", 0, imm)	--TODO
+     return 0
+   end
+ end
+diff --git a/src/jit/dis_loongarch64.lua b/src/jit/dis_loongarch64.lua
+index 0fe0266b..fde3a10b 100644
+--- a/src/jit/dis_loongarch64.lua
++++ b/src/jit/dis_loongarch64.lua
+@@ -1,7 +1,8 @@
+ ----------------------------------------------------------------------------
+--- LuaJIT LoongArch64 disassembler module.
++-- LuaJIT LoongArch disassembler module.
+ --
+ -- Copyright (C) 2005-2022 Mike Pall. All rights reserved.
++-- Copyright (C) 2022 Loongson Technology. All rights reserved.
+ -- Released under the MIT/X license. See Copyright Notice in luajit.h
+ ----------------------------------------------------------------------------
+ -- This is a helper module used by the LuaJIT machine code dumper module.
+@@ -353,19 +354,19 @@ local map_ldst1_10 = {
+   shift = 22, mask = 15,
+   [0] = "ld.bDJX",
+   [1] = "ld.hDJX",
+-  [2] = "ld.wDo",
+-  [3] = "ld.dDo",
+-  [4] = "st.bDo",
+-  [5] = "st.hDo",
+-  [6] = "st.wDo",
+-  [7] = "st.dDo",
+-  [8] = "ld.buDo",
+-  [9] = "ld.huDo",
++  [2] = "ld.wDJX",
++  [3] = "ld.dDJX",
++  [4] = "st.bDJX",
++  [5] = "st.hDJX",
++  [6] = "st.wDJX",
++  [7] = "st.dDJX",
++  [8] = "ld.buDJX",
++  [9] = "ld.huDJX",
+   [10] = "ld.wuDJX",
+-  [12] = "fld.sFo",
+-  [13] = "fst.sFo",
+-  [14] = "fld.dFo",
+-  [15] = "fst.dFo",
++  [12] = "fld.sFJX",
++  [13] = "fst.sFJX",
++  [14] = "fld.dFJX",
++  [15] = "fst.dFJX",
+ }
+ 
+ local map_fcmp0 = {
+diff --git a/src/lj_asm_loongarch64.h b/src/lj_asm_loongarch64.h
+index 3ab9e4f3..e81d8cf3 100644
+--- a/src/lj_asm_loongarch64.h
++++ b/src/lj_asm_loongarch64.h
+@@ -1,6 +1,7 @@
+ /*
+ ** LoongArch IR assembler (SSA IR -> machine code).
+ ** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
++** Copyright (C) 2022 Loongson Technology. All rights reserved.
+ */
+ 
+ /* -- Register allocator extensions --------------------------------------- */
+@@ -338,8 +339,8 @@ static void asm_callround(ASMState *as, IRIns *ir, IRCallID id)
+ {
+   /* The modified regs must match with the *.dasc implementation. */
+   RegSet drop = RID2RSET(RID_R12)|RID2RSET(RID_R13)|RID2RSET(RID_F0)|
+-                RID2RSET(RID_F4)|RID2RSET(RID_F9)|RID2RSET(RID_F22)
+-                |RID2RSET(RID_F23);
++		RID2RSET(RID_F4)|RID2RSET(RID_F9)|RID2RSET(RID_F22)
++		|RID2RSET(RID_F23);
+   if (ra_hasreg(ir->r)) rset_clear(drop, ir->r);
+   ra_evictset(as, drop);
+   ra_destreg(as, ir, RID_FPRET);
+@@ -864,6 +865,7 @@ static void asm_hrefk(ASMState *as, IRIns *ir)
+   RegSet allow = rset_exclude(RSET_GPR, node);
+   Reg idx = node;
+   Reg key = ra_scratch(as, allow);
++  rset_clear(allow, key);
+   int64_t k;
+   lj_assertA(ofs % sizeof(Node) == 0, "unaligned HREFK slot");
+   if (ofs > 32736) {
+@@ -890,23 +892,30 @@ static void asm_hrefk(ASMState *as, IRIns *ir)
+ static void asm_uref(ASMState *as, IRIns *ir)
+ {
+   Reg dest = ra_dest(as, ir, RSET_GPR);
+-  if (irref_isk(ir->op1)) {
++  int guarded = (irt_t(ir->t) & (IRT_GUARD|IRT_TYPE)) == (IRT_GUARD|IRT_PGC);
++  if (irref_isk(ir->op1) && !guarded) {
+     GCfunc *fn = ir_kfunc(IR(ir->op1));
+     MRef *v = &gcref(fn->l.uvptr[(ir->op2 >> 8)])->uv.v;
+     emit_lsptr(as, LOONGI_LD_D, dest, v, RSET_GPR);
+   } else {
+-    Reg uv = ra_scratch(as, RSET_GPR);
+-    Reg func = ra_alloc1(as, ir->op1, RSET_GPR);
+-    if (ir->o == IR_UREFC) {
+-      Reg tmp = ra_scratch(as, rset_exclude(rset_exclude(RSET_GPR, dest), uv));
+-      asm_guard(as, LOONGI_BEQ, tmp, RID_ZERO);
+-      emit_dji(as, LOONGI_ADDI_D, dest, uv, ((int32_t)offsetof(GCupval, tv))&0xfff);
+-      emit_dji(as, LOONGI_LD_BU, tmp, uv, ((int32_t)offsetof(GCupval, closed))&0xfff);
++    Reg tmp = ra_scratch(as, rset_exclude(RSET_GPR, dest));
++    if (guarded)
++      asm_guard(as, ir->o == IR_UREFC ? LOONGI_BEQ : LOONGI_BNE, tmp, RID_ZERO);
++    if (ir->o == IR_UREFC)
++      emit_dji(as, LOONGI_ADDI_D, dest, dest, ((int32_t)offsetof(GCupval, tv))&0xfff);
++    else
++      emit_dji(as, LOONGI_LD_D, dest, dest, ((int32_t)offsetof(GCupval, v))&0xfff);
++    if (guarded)
++      emit_dji(as, LOONGI_LD_BU, tmp, dest, ((int32_t)offsetof(GCupval, closed))&0xfff);
++    if (irref_isk(ir->op1)) {
++      GCfunc *fn = ir_kfunc(IR(ir->op1));
++      GCobj *o = gcref(fn->l.uvptr[(ir->op2 >> 8)]);
++      emit_loada(as, dest, o); // TODO
+     } else {
+-      emit_dji(as, LOONGI_LD_D, dest, uv, ((int32_t)offsetof(GCupval, v))&0xfff);
++      emit_lso(as, LOONGI_LD_D, dest, ra_alloc1(as, ir->op1, RSET_GPR),
++	        (int32_t)offsetof(GCfuncL, uvptr) +
++		(int32_t)sizeof(MRef) * (int32_t)(ir->op2 >> 8), RSET_GPR);
+     }
+-    emit_lso(as, LOONGI_LD_D, uv, func, (int32_t)offsetof(GCfuncL, uvptr) +
+-      (int32_t)sizeof(MRef) * (int32_t)(ir->op2 >> 8), RSET_GPR);
+   }
+ }
+ 
+@@ -994,7 +1003,7 @@ static void asm_fload(ASMState *as, IRIns *ir)
+       }
+     }
+     ofs = field_ofs[ir->op2];
+-    lj_assertA(!irt_isfp(ir->t), "bad FP FLOAD");
++  lj_assertA(!irt_isfp(ir->t), "bad FP FLOAD");
+   }
+   rset_clear(allow, idx);
+   emit_lso(as, loongi, dest, idx, ofs, allow);
+@@ -1084,6 +1093,7 @@ static void asm_ahustore(ASMState *as, IRIns *ir)
+   if (irt_isnum(ir->t)) {
+     src = ra_alloc1(as, ir->op2, RSET_FPR);
+     idx = asm_fuseahuref(as, ir->op1, &ofs, allow);
++    rset_clear(allow, idx);
+     emit_lso(as, LOONGI_FST_D, src, idx, ofs, allow);
+   } else {
+     Reg tmp = RID_TMP;
+@@ -1097,6 +1107,7 @@ static void asm_ahustore(ASMState *as, IRIns *ir)
+       rset_clear(allow, type);
+     }
+     idx = asm_fuseahuref(as, ir->op1, &ofs, allow);
++    rset_clear(allow, idx);
+     emit_lso(as, LOONGI_ST_D, tmp, idx, ofs, allow);
+     if (ra_hasreg(src)) {
+       if (irt_isinteger(ir->t)) {
+@@ -1139,7 +1150,8 @@ static void asm_sload(ASMState *as, IRIns *ir)
+ 	dest = tmp;
+ 	t.irt = IRT_NUM;  /* Check for original type. */
+       } else {
+-	Reg tmp = ra_scratch(as, RSET_GPR);
++	Reg tmp = ra_scratch(as, allow);
++        rset_clear(allow, tmp);
+ 	emit_dj(as, LOONGI_FFINT_D_W, dest, dest);
+ 	emit_dj(as, LOONGI_MOVGR2FR_W, dest, tmp);
+ 	dest = tmp;
+@@ -1165,6 +1177,7 @@ dotypecheck:
+     }
+     rset_clear(allow, type);
+     Reg tmp1 = ra_scratch(as, allow);
++    rset_clear(allow, tmp1);
+     if (irt_ispri(t)) {
+       asm_guard(as, LOONGI_BNE, type,
+ 		ra_allock(as, ~((int64_t)~irt_toitype(t) << 47) , allow));
+@@ -1173,6 +1186,7 @@ dotypecheck:
+                ra_allock(as, (int32_t)LJ_KEYINDEX, allow));
+       emit_dju(as, LOONGI_SRAI_D, tmp1, type, 32);
+     } else {
++      //Reg tmp1 = ra_scratch(as, allow);
+       if (irt_isnum(t)) {
+         asm_guard(as, LOONGI_BEQ, tmp1, RID_ZERO);
+         emit_dji(as, LOONGI_SLTUI, tmp1, tmp1, LJ_TISNUM&0xfff);
+@@ -1406,7 +1420,7 @@ static void asm_arithov(ASMState *as, IRIns *ir)
+   rset_clear(allow, tmp2);
+   if (irref_isk(ir->op2)) {
+     int k = IR(ir->op2)->i;
+-    if (ir->o == IR_SUBOV) k = -k;
++    if (ir->o == IR_SUBOV) k = (int)(~(unsigned int)k+1u);
+     if (LOONGF_S_OK(k, 12)) {	/* (dest < left) == (k >= 0 ? 1 : 0) */
+       left = ra_alloc1(as, ir->op1, allow);
+       asm_guard(as, k >= 0 ? LOONGI_BNE : LOONGI_BEQ, tmp2, RID_ZERO);
+@@ -1563,6 +1577,7 @@ static void asm_fpcomp(ASMState *as, IRIns *ir)
+   Reg right, left = ra_alloc2(as, ir, RSET_FPR);
+   right = (left >> 8); left &= 255;
+   asm_guard21(as, (op&1) ? LOONGI_BCNEZ : LOONGI_BCEQZ, 0);
++  // use case
+   switch (op) {
+     case IR_LT: case IR_UGE:
+       emit_djk(as, LOONGI_FCMP_CLT_D, 0, left, right);
+@@ -1579,6 +1594,9 @@ static void asm_fpcomp(ASMState *as, IRIns *ir)
+     case IR_EQ: case IR_NE:
+       emit_djk(as, LOONGI_FCMP_CEQ_D, 0, left, right);
+       break;
++    //case IR_NE:
++    //  emit_djk(as, LOONGI_FCMP_CNE_D, 0, left, right);
++    //  break;
+     default:
+       break;
+   }
+@@ -1770,6 +1788,7 @@ static void asm_gc_check(ASMState *as)
+   args[1] = ASMREF_TMP2;  /* MSize steps     */
+   asm_gencall(as, ci, args);
+   tmp1 = ra_releasetmp(as, ASMREF_TMP1);
++  //emit_dj32i(as, tmp1, RID_JGL, -32768);
+   tmp2 = ra_releasetmp(as, ASMREF_TMP2);
+   ra_allockreg(as, (int64_t)(J2G(as->J)), tmp1);
+   emit_loadi(as, tmp2, as->gcsteps);
+@@ -1838,7 +1857,7 @@ static Reg asm_head_side_base(ASMState *as, IRIns *irp)
+     if (rset_test(as->modset, r) || irt_ismarked(ir->t))
+       ir->r = RID_INIT;  /* No inheritance for modified BASE register. */
+     if (irp->r == r) {
+-      return r;  /* Same BASE register already coalesced. */
++      return r;	/* Same BASE register already coalesced. */
+     } else if (ra_hasreg(irp->r) && rset_test(as->freeset, irp->r)) {
+       emit_move(as, r, irp->r);  /* Move from coalesced parent reg. */
+       return irp->r;
+@@ -1906,7 +1925,8 @@ static Reg asm_setup_call_slots(ASMState *as, IRIns *ir, const CCallInfo *ci)
+   }
+   if (nslots > as->evenspill)  /* Leave room for args in stack slots. */
+     as->evenspill = nslots;
+-  return REGSP_HINT(RID_RET);
++//  return REGSP_HINT(RID_RET); // TODO
++  return irt_isfp(ir->t) ? REGSP_HINT(RID_FPRET) : REGSP_HINT(RID_RET);
+ }
+ 
+ static void asm_sparejump_setup(ASMState *as)
+@@ -1932,7 +1952,7 @@ void lj_asm_patchexit(jit_State *J, GCtrace *T, ExitNo exitno, MCode *target)
+   MCode *p = T->mcode;
+   MCode *pe = (MCode *)((char *)p + T->szmcode);
+   MCode *px = exitstub_trace_addr(T, exitno);
+-  MCode *cstart = NULL;
++  MCode *cstart = NULL, *cstop = NULL;
+   MCode *mcarea = lj_mcode_patch(J, p, 0);
+ 
+   MCode exitload = LOONGI_ADDI_D | LOONGF_D(RID_TMP) | LOONGF_J(RID_ZERO) | LOONGF_I(exitno&0xfff);
+@@ -1946,45 +1966,64 @@ void lj_asm_patchexit(jit_State *J, GCtrace *T, ExitNo exitno, MCode *target)
+           ((ins & 0xfc000000u) == LOONGI_BEQ ||
+            (ins & 0xfc000000u) == LOONGI_BNE ||
+            (ins & 0xfc000000u) == LOONGI_BLT ||
+-           (ins & 0xfc000000u) == LOONGI_BGE ||
+-	   (ins & 0xfc000000u) == LOONGI_BLTU)) {
++           (ins & 0xfc000000u) == LOONGI_BGE )) {
+         /* Patch beq/bne/blt/bge, if within range. */
+         if (p[-1] == LOONG_NOPATCH_GC_CHECK) {
+ 	  /* nothing */
++	  continue;
+         } else if (LOONGF_S_OK(delta, 16)) {
+           p[1] = (ins & 0xfc0003ffu) | LOONGF_I(delta & 0xffff);
+           *p = LOONGI_NOP;
+-          if (!cstart) cstart = p + 1;
+-        }
++        } else if (LOONGF_S_OK(delta, 21)) {
++	  Reg rj = (ins>>5) & 0x1f;
++	  Reg rd = ins & 0x1f;
++	  switch (ins & 0xfc000000u) {
++          case LOONGI_BEQ:
++          *p = LOONGI_SUB_D | LOONGF_D(RID_TMP) | LOONGF_J(rj) | LOONGF_K(rd);
++          p[1] = LOONGI_BEQZ | LOONGF_J(RID_TMP) | LOONGF_I(delta & 0xffff) | ((delta & 0x1f0000) >> 16);
++	  break;
++	  case LOONGI_BNE:
++          *p = LOONGI_SUB_D | LOONGF_D(RID_TMP) | LOONGF_J(rj) | LOONGF_K(rd);
++          p[1] = LOONGI_BNEZ | LOONGF_J(RID_TMP) | LOONGF_I(delta & 0xffff) | ((delta & 0x1f0000) >> 16);
++	  break;
++	  case LOONGI_BLT:
++          *p = LOONGI_SLT | LOONGF_D(RID_TMP) | LOONGF_J(rj) | LOONGF_K(rd);
++          p[1] = LOONGI_BNEZ | LOONGF_J(RID_TMP) | LOONGF_I(delta & 0xffff) | ((delta & 0x1f0000) >> 16);
++	  break;
++	  case LOONGI_BGE:
++          *p = LOONGI_SLT | LOONGF_D(RID_TMP) | LOONGF_J(rj) | LOONGF_K(rd);
++          p[1] = LOONGI_BEQZ | LOONGF_J(RID_TMP) | LOONGF_I(delta & 0xffff) | ((delta & 0x1f0000) >> 16);
++	  break;
++	  }
++	} else {
++          lj_assertJ(LOONGF_S_OK(delta, 21), "branch target out of range");
++	}
++	cstop = p + 2;
++        if (!cstart) cstart = p;
+       } else if (((ins ^ ((((px-p-1)&0xffff)<<10) + (((px-p-1)>>10)&0x1f))) & 0x3fffc1f) == 0 &&
+                  ((ins & 0xfc000000u) == LOONGI_BCEQZ ||
+                   (ins & 0xfc000100u) == LOONGI_BCNEZ)) {
+-        /* Patch bceqz/bcnez, if within range. */
+-        if (p[-1] == LOONG_NOPATCH_GC_CHECK) {
+-	  /* nothing */
+-        } else if (LOONGF_S_OK(delta, 21)) {
++        if (LOONGF_S_OK(delta, 21)) {
+           p[1] = (ins & 0xfc0003e0u) | LOONGF_I(delta & 0xffff) | ((delta & 0x1f0000) >> 16);
+           *p = LOONGI_NOP;
+-          if (!cstart) cstart = p + 1;
+-        }
+-      } else if (((ins ^ ((((px-p-1)&0xffff)<<10) + (((px-p-1)>>10)&0x3f))) & 0x3ffffff) == 0 &&
+-          ((ins & 0xfc000000u) == LOONGI_B)) {
+-        /* Patch b. */
+-        lj_assertJ(LOONGF_S_OK(delta, 26), "branch target out of range");
+-        p[1] = (ins & 0xfc000000u) | LOONGF_I(delta & 0xffff) | ((delta & 0x3ff0000) >> 16);
+-        *p = LOONGI_NOP;
+-        if (!cstart) cstart = p + 1;
+-      } else if (p+2 == pe){
++	  cstop = p + 2;
++          if (!cstart) cstart = p;
++        } else {
++	  lj_assertJ(LOONGF_S_OK(delta, 21), "branch target out of range");
++	}
++      } else if (p+3 == pe) {
+          if (p[2] == LOONGI_NOP) {
+             ptrdiff_t delta = target - &p[2];
+             lj_assertJ(LOONGF_S_OK(delta, 26), "branch target out of range");
+             p[2] = LOONGI_B | LOONGF_I(delta & 0xffff) | ((delta & 0x3ff0000) >> 16);
+             *p = LOONGI_NOP;
++	    cstop = p + 3;
+             if (!cstart) cstart = p + 2;
+          }
+        }
+     }
+   }
+-  if (cstart) lj_mcode_sync(cstart, px+1);
++
++  if (cstart) lj_mcode_sync(cstart, cstop);
+   lj_mcode_patch(J, mcarea, 1);
+ }
+diff --git a/src/lj_emit_loongarch64.h b/src/lj_emit_loongarch64.h
+index 74a293cc..1484a177 100644
+--- a/src/lj_emit_loongarch64.h
++++ b/src/lj_emit_loongarch64.h
+@@ -1,6 +1,7 @@
+ /*
+ ** LoongArch instruction emitter.
+ ** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
++** Copyright (C) 2022 Loongson Technology. All rights reserved.
+ */
+ 
+ static intptr_t get_k64val(ASMState *as, IRRef ref)
+@@ -118,7 +119,7 @@ static void emit_lsptr(ASMState *as, LOONGIns loongi, Reg r, void *p, RegSet all
+   intptr_t jgl = (intptr_t)(J2G(as->J));
+   intptr_t i = (intptr_t)(p);
+   Reg base;
+-  if ((uint32_t)(i-jgl) < 65536) {
++  if ((uint32_t)(i-jgl) < 65536) {	//TODO
+     i = i-jgl-32768;
+     base = RID_JGL;
+   } else {
+@@ -277,8 +278,10 @@ static void emit_loadofs(ASMState *as, IRIns *ir, Reg r, Reg base, int32_t ofs)
+ {
+   if (r < RID_MAX_GPR) {
+     emit_djk(as, irt_is64(ir->t) ? LOONGI_LDX_D : LOONGI_LDX_W, r, base, RID_R20);
++    //emit_dji(as, irt_is64(ir->t) ? LOONGI_LD_D : LOONGI_LD_W, r, base, ofs&0xfff);
+   } else {
+     emit_djk(as, irt_isnum(ir->t) ? LOONGI_FLDX_D : LOONGI_FLDX_S, r, base, RID_R20);
++    //emit_dji(as, irt_isnum(ir->t) ? LOONGI_FLD_D : LOONGI_FLD_S, r, base, ofs&0xfff);
+   }
+   emit_d16i(as, RID_R20, ofs);
+ }
+@@ -288,8 +291,10 @@ static void emit_storeofs(ASMState *as, IRIns *ir, Reg r, Reg base, int32_t ofs)
+ {
+   if (r < RID_MAX_GPR) {
+     emit_djk(as, irt_is64(ir->t) ? LOONGI_STX_D : LOONGI_STX_W, r, base, RID_R20);
++    //emit_dji(as, irt_is64(ir->t) ? LOONGI_ST_D : LOONGI_ST_W, r, base, ofs&0xfff);
+   } else {
+     emit_djk(as, irt_isnum(ir->t) ? LOONGI_FSTX_D : LOONGI_FSTX_S, (r&31), base, RID_R20);
++    //emit_dji(as, irt_isnum(ir->t) ? LOONGI_FST_D : LOONGI_FST_S, r, base, ofs&0xfff);
+   }
+   emit_d16i(as, RID_R20, ofs);
+ }
+diff --git a/src/lj_target_loongarch64.h b/src/lj_target_loongarch64.h
+index 100f5e87..070f077a 100644
+--- a/src/lj_target_loongarch64.h
++++ b/src/lj_target_loongarch64.h
+@@ -1,6 +1,7 @@
+ /*
+ ** Definitions for LoongArch CPUs.
+ ** Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
++** Copyright (C) 2022 Loongson Technology. All rights reserved.
+ */
+ 
+ #ifndef _LJ_TARGET_LOONGARCH_H
+@@ -69,7 +70,7 @@ enum {
+ #define RSET_INIT	RSET_ALL
+ 
+ /* scratch register. */
+-#define RSET_SCRATCH_GPR	RSET_RANGE(RID_R4, RID_R19+1)
++#define RSET_SCRATCH_GPR	(RSET_RANGE(RID_R4, RID_R19+1))
+ #define RSET_SCRATCH_FPR	RSET_RANGE(RID_F0, RID_F23+1)
+ #define RSET_SCRATCH		(RSET_SCRATCH_GPR|RSET_SCRATCH_FPR)
+ #define REGARG_FIRSTGPR		RID_R4
+@@ -187,6 +188,8 @@ typedef enum LOONGIns {
+   LOONGI_BGE = 0x64000000,
+   LOONGI_BGEU = 0x6c000000,
+   LOONGI_BLTU = 0x68000000,
++  LOONGI_BEQZ = 0x40000000,
++  LOONGI_BNEZ = 0x44000000,
+   LOONGI_BCEQZ = 0x48000000,
+   LOONGI_BCNEZ = 0x48000100,
+ 
+diff --git a/src/vm_loongarch64.dasc b/src/vm_loongarch64.dasc
+index 9458e7e2..b9b818d9 100644
+--- a/src/vm_loongarch64.dasc
++++ b/src/vm_loongarch64.dasc
+@@ -1,6 +1,7 @@
+ |// Low-level VM code for LoongArch CPUs.
+ |// Bytecode interpreter, fast functions and helper functions.
+ |// Copyright (C) 2005-2022 Mike Pall. See Copyright Notice in luajit.h
++|// Copyright (C) 2022 Loongson Technology. All rights reserved.
+ |
+ |.arch loongarch64
+ |.section code_op, code_sub
+@@ -10,11 +11,49 @@
+ |.globalnames globnames
+ |.externnames extnames
+ |
++|// Note: The ragged indentation of the instructions is intentional.
++|//       The starting columns indicate data dependencies.
++|
+ |//-----------------------------------------------------------------------
+ |
+ |// Fixed register assignments for the interpreter.
+ |// Don't use: r0 = 0, r1 = ra, r2 = tp, r3 = sp, r21 = reserved
+ |
++|.macro .STXW, a, b, c
++|  addu16i.d r20, r0, c
++|  srai.d r20, r20, 16
++|  stx.w a, b, r20
++|.endmacro
++|
++|.macro .STXD, a, b, c
++|  addu16i.d r20, r0, c
++|  srai.d r20, r20, 16
++|  stx.d a, b, r20
++|.endmacro
++|
++|.macro .LDXW, a, b, c
++|  addu16i.d r20, r0, c
++|  srai.d r20, r20, 16
++|  ldx.w a, b, r20
++|.endmacro
++|
++|.macro .LDXD, a, b, c
++|  addu16i.d r20, r0, c
++|  srai.d r20, r20, 16
++|  ldx.d a, b, r20
++|.endmacro
++|
++|.macro .LDXBU, a, b, c
++|  addu16i.d r20, r0, c
++|  srai.d r20, r20, 16
++|  ldx.bu a, b, r20
++|.endmacro
++|
++|.macro .ADD16I, a, b, c
++|  addu16i.d r20, r0, c
++|  srai.d r20, r20, 16
++|  add.d a, b, r20
++|.endmacro
+ |
+ |// The following must be C callee-save (but BASE is often refetched).
+ |.define BASE,		r23	// Base of current Lua stack frame.
+@@ -94,11 +133,14 @@
+ |.define SAVE_FPR_,	16	// .. 16+8*8: 64 bit FPR saves.
+ |
+ |
++|.define TMPX,		8	// Unused by interpreter, temp for JIT code.
+ |.define TMPD,		0
+ |//----- 16 byte aligned
+ |
+ |.define TMPD_OFS,	0
+ |
++|//.define SAVE_MULTRES,	sp, TMPD
++|
+ |//-----------------------------------------------------------------------
+ |
+ |.macro saveregs
+@@ -148,44 +190,6 @@
+ |  jirl r0, ra, 0
+ |.endmacro
+ |
+-|//-----------------------------------------------------------------------
+-|
+-|.macro .STXW, a, b, c
+-|  addu16i.d r20, r0, c
+-|  srai.d r20, r20, 16
+-|  stx.w a, b, r20
+-|.endmacro
+-|
+-|.macro .STXD, a, b, c
+-|  addu16i.d r20, r0, c
+-|  srai.d r20, r20, 16
+-|  stx.d a, b, r20
+-|.endmacro
+-|
+-|.macro .LDXW, a, b, c
+-|  addu16i.d r20, r0, c
+-|  srai.d r20, r20, 16
+-|  ldx.w a, b, r20
+-|.endmacro
+-|
+-|.macro .LDXD, a, b, c
+-|  addu16i.d r20, r0, c
+-|  srai.d r20, r20, 16
+-|  ldx.d a, b, r20
+-|.endmacro
+-|
+-|.macro .LDXBU, a, b, c
+-|  addu16i.d r20, r0, c
+-|  srai.d r20, r20, 16
+-|  ldx.bu a, b, r20
+-|.endmacro
+-|
+-|.macro .ADD16I, a, b, c
+-|  addu16i.d r20, r0, c
+-|  srai.d r20, r20, 16
+-|  add.d a, b, r20
+-|.endmacro
+-|
+ |// Type definitions. Some of these are only used for documentation.
+ |.type L,		lua_State,	LREG
+ |.type GL,		global_State
+@@ -204,7 +208,7 @@
+ |
+ |//-----------------------------------------------------------------------
+ |
+-|// Trap for not-yet-implemented parts.
++|// Trap for not-yet-implemented parts.	TODO
+ |.macro NYI; break 0; .endmacro
+ |
+ |//-----------------------------------------------------------------------
+@@ -215,7 +219,7 @@
+ |
+ |//-----------------------------------------------------------------------
+ |
+-|// Endian-specific defines. LoongArch is little endian.
++|// Endian-specific defines. LoongArch is little endian. TODO
+ |.define OFS_RD,	2
+ |.define OFS_RA,	1
+ |.define OFS_OP,	0
+@@ -314,7 +318,7 @@
+ |  srli.d TMP1, PC, 1
+ |  andi TMP1, TMP1, 126
+ |  add.d TMP1, TMP1, DISPATCH
+-|  ld.hu TMP2, GG_DISP2HOT(TMP1)
++|  ld.hu TMP2, GG_DISP2HOT(TMP1)		// TMP2: hotcount[]
+ |  addi.w TMP2, TMP2, -delta
+ |  st.h TMP2, GG_DISP2HOT(TMP1)
+ |  blt TMP2, r0, target
+@@ -2384,9 +2388,10 @@ static void build_subroutines(BuildCtx *ctx)
+   |
+   |5:  // Traverse hash part.
+   |  sub.w NEXT_RES_IDX, NEXT_IDX, NEXT_ASIZE
+-  |  ld.w NEXT_TMP0, NEXT_TAB->hmask
+-  |  ld.d NODE:NEXT_RES_VK, NEXT_TAB->node
++  |  or r18, CARG1, r0
++  |  ld.d NODE:NEXT_RES_VK, TAB:r18->node
+   |  slli.w NEXT_TMP2, NEXT_RES_IDX, 5
++  |  ld.w NEXT_TMP0, TAB:r18->hmask
+   |  slli.w TMP3, NEXT_RES_IDX, 3
+   |  sub.w TMP3, NEXT_TMP2, TMP3
+   |  add.d NODE:NEXT_RES_VK, NODE:NEXT_RES_VK, TMP3
+@@ -2485,7 +2490,7 @@ static void build_subroutines(BuildCtx *ctx)
+   |  or TMP2, sp, r0
+   |  sub.d sp, sp, TMP1
+   |  st.d ra, -8(TMP2)
+-  |  slli.w CARG2, CARG2, 3
++  |//  slli.w CARG2, CARG2, 3
+   |  st.d r23, -16(TMP2)
+   |  st.d CCSTATE, -24(TMP2)
+   |  or r23, TMP2, r0
+@@ -2826,7 +2831,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |  ld.hu TMP2, OFS_RD(PC)		// TMP2: RD in next INS, branch target
+     |  gettp TMP1, TMP1
+     |  addi.d PC, PC, 4
+-    |  xor TMP0, TMP1, TMP0		// TMP0=0 A=D; TMP0!=0 A!=D
++    |  xor TMP0, TMP1, TMP0		// TMP0=0 A=D; TMP0~=0 A~=D
+     |.if FFI
+     |  addi.w TMP3, r0, LJ_TCDATA
+     |  beq TMP1, TMP3, ->vmeta_equal_cd
+@@ -4221,13 +4226,13 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     }
+     |1:
+     if (op == BC_FORI) {
+-      |  maskeqz TMP2, TMP2, CARG2	// CARG2!=0: jump out the loop; CARG2==0: next INS
++      |  maskeqz TMP2, TMP2, CARG2	// CARG2~=0: jump out the loop; CARG2==0: next INS
+       |  add.d PC, PC, TMP2
+     } else if (op == BC_JFORI) {
+       |  add.d PC, PC, TMP2
+       |  ld.hu RD, -4+OFS_RD(PC)
+     } else if (op == BC_IFORL) {
+-      |  masknez TMP2, TMP2, CARG2	// CARG2!=0: next INS; CARG2==0: jump back
++      |  masknez TMP2, TMP2, CARG2	// CARG2~=0: next INS; CARG2==0: jump back
+       |  add.d PC, PC, TMP2
+     }
+     |  ins_next1
+@@ -4401,6 +4406,7 @@ static void build_ins(BuildCtx *ctx, BCOp op, int defop)
+     |  settp LFUNC:RB, TMP0
+     |  add.d TMP0, RA, RC
+     |  st.d LFUNC:RB, 0(TMP1)		// Store (tagged) copy of LFUNC.
++    |  addi.d TMP2, TMP2, -8
+     |  addi.d TMP3, RC, 16+FRAME_VARG
+     |  sltu TMP0, TMP0, TMP2
+     |  ld.d KBASE, -4+PC2PROTO(k)(PC)
+@@ -4547,7 +4553,6 @@ static void emit_asm_debug(BuildCtx *ctx)
+ 	"\t.align 3\n"
+ 	".LEFDE1:\n\n", (int)ctx->codesz - fcofs);
+ #endif
+-#if !LJ_NO_UNWIND
+     fprintf(ctx->fp, "\t.section .eh_frame,\"a\",@progbits\n");
+     fprintf(ctx->fp,
+ 	".Lframe1:\n"
+@@ -4613,7 +4618,6 @@ static void emit_asm_debug(BuildCtx *ctx)
+ 	"\t.align 2\n"
+ 	".LEFDE3:\n\n", (int)ctx->codesz - fcofs);
+ #endif
+-#endif
+ #if !LJ_NO_UNWIND
+     /* NYI */
+ #endif
