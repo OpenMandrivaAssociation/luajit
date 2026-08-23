@@ -149,6 +149,9 @@ Patch2087:	0088-LoongArch64-Unify-Lua-number-to-FFI-integer-conversi.patch
 Patch2088:	0089-LoongArch64-DUALNUM-Improve-fix-edge-cases-of-unary-.patch
 Patch2089:	0090-LoongArch64-Avoid-unaligned-load-in-lj_vm_exit_inter.patch
 Patch2090:	0091-LoongArch64-Bump-copyright-date.patch
+# Interpreter was missing BC_BNOT/BAND/BOR/BXOR/BSHL/BSHR/BSAR; buildvm
+# died with "undefined opcode BC_BNOT". JIT and bit.* ffuncs already exist.
+Patch2091:	0092-LoongArch64-Add-missing-interpreter-bitops.patch
 
 Requires:	%{libcommon} = %{version}-%{release}
 

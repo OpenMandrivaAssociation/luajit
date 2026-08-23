@@ -1,0 +1,105 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Bernhard Rosenkränzer <bero@lindev.ch>
+Date: Sun, 23 Aug 2026 00:00:00 +0000
+Subject: [PATCH 92/92] LoongArch64: Add missing interpreter bitops
+
+The Loongson interpreter never grew handlers for BC_BNOT/BAND/BOR/BXOR
+and BC_BSHL/BSHR/BSAR. buildvm therefore dies with "undefined opcode
+BC_BNOT" as soon as those bytecodes exist (Lua 5.2/5.3 bit operators,
+and bit.* compiled to bytecode).
+
+Port the RISC-V VM bitops section: integer fast path plus lj_meta_bitop
+fallback. JIT IR assemblers and bit.* fast functions were already present.
+
+---
+ src/vm_loongarch64.dasc | 70 +
+ 1 file changed, 70 insertions(+)
+
+diff --git a/src/vm_loongarch64.dasc b/src/vm_loongarch64.dasc
+index 21776e9f..bitops001 100644
+--- a/src/vm_loongarch64.dasc
++++ b/src/vm_loongarch64.dasc
+@@ -949,6 +949,22 @@
+   |  b ->vmeta_binop			// Binop call for compatibility.
+ #endif
+   |
++  |//-- Bit operator metamethods -------------------------------------------
++  |
++  |->vmeta_bnot:
++  |  mv RC, RB
++  |
++  |->vmeta_bitop:
++  |  st.d BASE, L->base
++  |  mv CARG2, RA
++  |  st.d PC, SAVE_PC(sp)
++  |  mv CARG3, RB
++  |  mv CARG4, RC
++  |  decode_OP CARG5, INS
++  |  mv CARG1, L
++  |  bl extern lj_meta_bitop		// (lua_State *L, TValue *ra,*rb,*rc, BCReg op)
++  |  b ->cont_nop
++  |
+   |//-- Call metamethod ----------------------------------------------------
+   |
+   |->vmeta_call:			// Resolve and call __call metamethod.
+@@ -3133,6 +3149,60 @@
+     |  ins_next
+     break;
+ 
++  /* -- Bit ops ----------------------------------------------------------- */
++
++  case BC_BNOT:
++    |  // RA = dst*8, RD = src*8
++    |  add.d RB, BASE, RD
++    |  add.d RA, BASE, RA
++    |  ld.d CARG1, 0(RB)
++    |  checkint CARG1, ->vmeta_bnot
++    |  nor CARG1, CARG1, r0
++    |  bstrpick.d CARG1, CARG1, 31, 0
++    |  ins_next1
++    |  settp CARG1, TISNUM
++    |  st.d CARG1, 0(RA)
++    |  ins_next2
++    break;
++
++    |.macro ins_bitop, ins
++    |  // RA = dst*8, RB = src1*8, RC = src2*8
++    |  decode_RB RB, INS
++    |  decode_RDtoRC8 RC, RD
++    |  add.d RB, BASE, RB
++    |  add.d RC, BASE, RC
++    |  add.d RA, BASE, RA
++    |  ld.d CARG1, 0(RB)
++    |  ld.d CARG2, 0(RC)
++    |  checkint CARG1, ->vmeta_bitop
++    |  checkint CARG2, ->vmeta_bitop
++    |  ins CRET1, CARG1, CARG2
++    |  bstrpick.d CRET1, CRET1, 31, 0
++    |  ins_next1
++    |  settp CRET1, TISNUM
++    |  st.d CRET1, 0(RA)
++    |  ins_next2
++    |.endmacro
++
++  case BC_BAND:
++    |  ins_bitop and
++    break;
++  case BC_BOR:
++    |  ins_bitop or
++    break;
++  case BC_BXOR:
++    |  ins_bitop xor
++    break;
++  case BC_BSHL:
++    |  ins_bitop sll.w
++    break;
++  case BC_BSHR:
++    |  ins_bitop srl.w
++    break;
++  case BC_BSAR:
++    |  ins_bitop sra.w
++    break;
++
+   /* -- Constant ops ------------------------------------------------------ */
+ 
+   case BC_KSTR:
