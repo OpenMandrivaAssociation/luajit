@@ -217,6 +217,9 @@ sed -i -e 's,^multilib=lib,multilib=%{_lib},' etc/luajit.pc
 	Q='' \
 	DEFAULT_CC="%{__cc}" \
 %if %cross_compiling
+	CFLAGS="" HOST_CFLAGS="-O2" \
+%endif
+%if %cross_compiling
 %ifarch %{riscv}
 	HOST_CC="clang -D__riscv_compressed -D__riscv_float_abi_double" \
 %else
